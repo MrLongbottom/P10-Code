@@ -36,28 +36,31 @@ def random_initialize(documents, doc_topic, topic_word):
     for d, doc in enumerate(documents):
         zCurrentDoc = []
         for w in doc:
-            pz = np.divide(np.multiply(doc_topic[d, :], topic_word[:, w]), nz)
+            pz = np.divide(np.multiply(doc_topic[d, :], topic_word[:, w]), topics)
             z = np.random.multinomial(1, pz / pz.sum()).argmax()
             zCurrentDoc.append(z)
             doc_topic[d, z] += 1
             topic_word[z, w] += 1
-            nz[z] += 1
+            topics[z] += 1
         Z.append(zCurrentDoc)
 
 
-def gibbsSampling(documents, doc_topic, topic_word):
+def gibbs_sampling(documents, doc_topic, topic_word, tops):
     for d_index, doc in enumerate(documents):
         for w_index, word in enumerate(doc):
             topic = Z[d_index][w_index]
             doc_topic[d_index, topic] -= 1
             topic_word[topic, word] -= 1
-            nz[topic] -= 1
-            pz = np.divide(np.multiply(doc_topic[d_index, :], topic_word[:, word]), nz)
-            topic = np.random.multinomial(1, pz / pz.sum()).argmax()
-            Z[d_index][w_index] = topic
-            doc_topic[d_index, topic] += 1
-            topic_word[topic, word] += 1
-            nz[topic] += 1
+            tops[topic] -= 1
+
+            probability_of_topic = np.divide(np.multiply(doc_topic[d_index, :], topic_word[:, word]), topics)
+            drawn_topic = np.random.multinomial(1, probability_of_topic / probability_of_topic.sum()).argmax()
+
+            Z[d_index][w_index] = drawn_topic
+            doc_topic[d_index, drawn_topic] += 1
+            topic_word[drawn_topic, word] += 1
+            tops[drawn_topic] += 1
+    return doc_topic, topic_word, tops
 
 
 def perplexity():
@@ -66,7 +69,7 @@ def perplexity():
     ll = 0.0
     for d, doc in enumerate(docs):
         for w in doc:
-            ll = ll + np.log(((topic_word_dist[:, w] / nz) * (document_topic_dist[d, :] / nd[d])).sum())
+            ll = ll + np.log(((topic_word_dist[:, w] / topics) * (document_topic_dist[d, :] / nd[d])).sum())
             n = n + 1
     return np.exp(ll / (-n))
 
@@ -82,18 +85,18 @@ if __name__ == '__main__':
     M = len(word2id)
     document_topic_dist = np.zeros([N, K]) + alpha
     topic_word_dist = np.zeros([K, M]) + beta
-    nz = np.zeros([K]) + M * beta
+    topics = np.zeros([K]) + M * beta
     random_initialize(docs, document_topic_dist, topic_word_dist)
     for i in range(0, iterationNum):
-        gibbsSampling(docs, document_topic_dist, topic_word_dist)
+        document_topic_dist, topic_word_dist, topics = gibbs_sampling(docs, document_topic_dist, topic_word_dist, topics)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity())
 
     topic_words = []
     maxTopicWordsNum = 10
     for z in range(0, K):
         ids = topic_word_dist[z, :].argsort()
-        topic_word = []
+        tword = []
         for j in ids:
-            topic_word.insert(0, id2word[j])
-        topic_words.append(topic_word[0: min(10, len(topic_word))])
+            tword.insert(0, id2word[j])
+        topic_words.append(tword[0: min(10, len(tword))])
     print(topic_words)
