@@ -11,6 +11,8 @@ import pyro.distributions as dist
 from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO
 from pyro.optim import ClippedAdam
 
+import numpy as np
+
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
 
@@ -21,6 +23,8 @@ logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.IN
 def model(data=None, args=None, batch_size=None):
     # Globals.
     with pyro.plate("topics", args.num_topics):
+        # topic_weights does not seem to come from the usual LDA plate notation, but seems to give an indication of
+        # the importance of topics. It might be from the amortized LDA paper.
         topic_weights = pyro.sample("topic_weights", dist.Gamma(1. / args.num_topics, 1.))
         topic_words = pyro.sample("topic_words",
                                   dist.Dirichlet(torch.ones(args.num_words) / args.num_words))
@@ -29,7 +33,7 @@ def model(data=None, args=None, batch_size=None):
     with pyro.plate("documents", args.num_docs) as ind:
         if data is not None:
             with pyro.util.ignore_jit_warnings():
-                assert data.shape == (args.num_words_per_doc, args.num_docs)
+                assert data.shape == (args.num_words_per_doc, args.num_docs)  # Forces the 64x1000 shape
             data = data[:, ind]
         doc_topics = pyro.sample("doc_topics", dist.Dirichlet(topic_weights))
         with pyro.plate("words", args.num_words_per_doc):
@@ -51,7 +55,7 @@ def make_predictor(args):
     layer_sizes = ([args.num_words] +
                    [int(s) for s in args.layer_sizes.split('-')] +
                    [args.num_topics])
-    logging.info('Creating MLP with sizes {}'.format(layer_sizes))
+    logging.info('Creating MLP with sizes {}'.format(layer_sizes))  # Default layers: 1000 -> 100 -> 100 -> 8
     layers = []
     for in_size, out_size in zip(layer_sizes, layer_sizes[1:]):
         layer = nn.Linear(in_size, out_size)
@@ -117,13 +121,13 @@ def main(args):
 
 
 if __name__ == '__main__':
-    assert pyro.__version__.startswith('1.5.1')
+    assert pyro.__version__.startswith('1.5.2')
     parser = argparse.ArgumentParser(description="Amortized Latent Dirichlet Allocation")
     parser.add_argument("-t", "--num-topics", default=8, type=int)
     parser.add_argument("-w", "--num-words", default=1024, type=int)
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
     parser.add_argument("-wd", "--num-words-per-doc", default=64, type=int)
-    parser.add_argument("-n", "--num-steps", default=1000, type=int)
+    parser.add_argument("-n", "--num-steps", default=50, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
     parser.add_argument("-lr", "--learning-rate", default=0.01, type=float)
     parser.add_argument("-b", "--batch-size", default=32, type=int)
