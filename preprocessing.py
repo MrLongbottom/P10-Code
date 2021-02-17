@@ -7,12 +7,20 @@ def preprocessing(printouts=False, save=False):
     # load data file
     if printouts:
         print("Loading dataset")
-    data, cate = loading.load_document_file("data/2017_data.json")
+    texts, categories = loading.load_document_file("data/2017_data.json")
+
+    # removing duplicates from dictionaries
+    rev = {v: k for k, v in texts.items()}
+    new_texts = {v: k for k, v in rev.items()}
+    bad_ids = [x for x in texts.keys() if x not in new_texts.keys()]
+
+    categories = {k: v for k, v in categories.items() if k not in bad_ids}
+    texts = new_texts
 
     # tokenize (document token generators)
     if printouts:
         print("Tokenization")
-    documents = [gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8') for x in tqdm(data.values())]
+    documents = [gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8') for x in tqdm(texts.values())]
 
     # normalize (currently doesn't work)
     # documents = [[y for y in gensim.utils.tokenize(x[0], lowercase=True, deacc=True, encoding='utf-8')] for x in data.values()]
