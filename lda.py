@@ -20,7 +20,7 @@ logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.IN
 # data is a [num_words_per_doc, num_documents] shaped array of word ids
 # (specifically it is not a histogram). We assume in this simple example
 # that all documents have the same number of words.
-def model(data=None, args=None, batch_size=None):
+def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
     # Globals.
     with pyro.plate("topics", args.num_topics):
         # topic_weights does not seem to come from the usual LDA plate notation, but seems to give an indication of
@@ -29,24 +29,33 @@ def model(data=None, args=None, batch_size=None):
         topic_words = pyro.sample("topic_words",
                                   dist.Dirichlet(torch.ones(args.num_words) / args.num_words))
 
+    with pyro.plate("categories", args.num_categories):
+        category_weights = pyro.sample("category_weights", dist.Gamma(1. / args.num_categories, 1.))
+        category_topics = pyro.sample("category_topics", dist.Dirichlet(topic_weights))
+
     # Locals.
     with pyro.plate("documents", args.num_docs) as ind:
-        if data is not None:
+        if doc_word_data is not None:
             with pyro.util.ignore_jit_warnings():
-                assert data.shape == (args.num_words_per_doc, args.num_docs)  # Forces the 64x1000 shape
-            data = data[:, ind]
-        doc_topics = pyro.sample("doc_topics", dist.Dirichlet(topic_weights))
+                assert doc_word_data.shape == (args.num_words_per_doc, args.num_docs)  # Forces the 64x1000 shape
+            doc_word_data = doc_word_data[:, ind]
+
+        if category_data is not None:
+            category_data = category_data[:, ind]
+
+        doc_categories = pyro.sample("doc_categories", dist.Categorical(category_weights), obs=category_data)
+        # doc_topics = pyro.sample("doc_topics", dist.Dirichlet(topic_weights))
         with pyro.plate("words", args.num_words_per_doc):
             # The word_topics variable is marginalized out during inference,
             # achieved by specifying infer={"enumerate": "parallel"} and using
             # TraceEnum_ELBO for inference. Thus we can ignore this variable in
             # the guide.
-            word_topics = pyro.sample("word_topics", dist.Categorical(doc_topics),
+            word_topics = pyro.sample("word_topics", dist.Categorical(category_topics[doc_categories]),
                                       infer={"enumerate": "parallel"})
-            data = pyro.sample("doc_words", dist.Categorical(topic_words[word_topics]),
-                               obs=data)
+            doc_word_data = pyro.sample("doc_words", dist.Categorical(topic_words[word_topics]),
+                                        obs=doc_word_data)
 
-    return topic_weights, topic_words, data
+    return topic_weights, topic_words, doc_word_data, category_data
 
 
 # We will use amortized inference of the local topic variables, achieved by a
@@ -67,7 +76,7 @@ def make_predictor(args):
     return nn.Sequential(*layers)
 
 
-def parametrized_guide(predictor, data, args, batch_size=None):
+def parametrized_guide(predictor, doc_word_data, category_data, args, batch_size=None):
     # Use a conjugate guide for global variables.
     topic_weights_posterior = pyro.param(
             "topic_weights_posterior",
@@ -81,16 +90,36 @@ def parametrized_guide(predictor, data, args, batch_size=None):
         pyro.sample("topic_weights", dist.Gamma(topic_weights_posterior, 1.))
         pyro.sample("topic_words", dist.Dirichlet(topic_words_posterior))
 
-    # Use an amortized guide for local variables.
-    pyro.module("predictor", predictor)
+    category_weights_posterior = pyro.param(
+        "category_weights_posterior",
+        lambda: torch.ones(args.num_categories),
+        constraint=constraints.positive)
+    category_topics_posterior = pyro.param(
+        "category_topics_posterior",
+        lambda: torch.ones(args.num_categories, args.num_topics),
+        constraint=constraints.greater_than(0.5))
+    with pyro.plate("categories", args.num_categories):
+        pyro.sample("category_weights", dist.Gamma(category_weights_posterior, 1.))
+        pyro.sample("category_topics", dist.Dirichlet(category_topics_posterior))
+
+    doc_category_posterior = pyro.param(
+        "doc_category_posterior",
+        lambda: torch.ones(args.num_topics),
+        constraint=constraints.positive)
     with pyro.plate("documents", args.num_docs, batch_size) as ind:
-        data = data[:, ind]
-        # The neural network will operate on histograms rather than word
-        # index vectors, so we'll convert the raw data to a histogram.
-        counts = (torch.zeros(args.num_words, ind.size(0))
-                       .scatter_add(0, data, torch.ones(data.shape)))
-        doc_topics = predictor(counts.transpose(0, 1))
-        pyro.sample("doc_topics", dist.Delta(doc_topics, event_dim=1))
+        pyro.sample("doc_categories", dist.Gamma(doc_category_posterior, 1.))
+
+    # Use an amortized guide for local variables.
+    # pyro.module("predictor", predictor)
+    # with pyro.plate("documents", args.num_docs, batch_size) as ind:
+    #     doc_word_data = doc_word_data[:, ind]
+    #     category_data = category_data[:, ind]
+    #     # The neural network will operate on histograms rather than word
+    #     # index vectors, so we'll convert the raw data to a histogram.
+    #     counts = (torch.zeros(args.num_words, ind.size(0))
+    #               .scatter_add(0, doc_word_data, torch.ones(doc_word_data.shape)))
+    #     doc_topics = predictor(counts.transpose(0, 1))
+    #     pyro.sample("doc_topics", dist.Delta(doc_topics, event_dim=1))
 
 
 def main(args):
@@ -100,7 +129,7 @@ def main(args):
     pyro.enable_validation(__debug__)
 
     # We can generate synthetic data directly by calling the model.
-    true_topic_weights, true_topic_words, data = model(args=args)
+    true_topic_weights, true_topic_words, doc_word_data, category_data = model(args=args)
 
     # We'll train using SVI.
     logging.info('-' * 40)
@@ -113,16 +142,17 @@ def main(args):
     svi = SVI(model, guide, optim, elbo)
     logging.info('Step\tLoss')
     for step in range(args.num_steps):
-        loss = svi.step(data, args=args, batch_size=args.batch_size)
+        loss = svi.step(doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
         if step % 10 == 0:
             logging.info('{: >5d}\t{}'.format(step, loss))
-    loss = elbo.loss(model, guide, data, args=args)
+    loss = elbo.loss(model, guide, doc_word_data=doc_word_data, category_data=category_data, args=args)
     logging.info('final loss = {}'.format(loss))
 
 
 if __name__ == '__main__':
     assert pyro.__version__.startswith('1.5.2')
     parser = argparse.ArgumentParser(description="Amortized Latent Dirichlet Allocation")
+    parser.add_argument("-c", "--num-categories", default=4, type=int)
     parser.add_argument("-t", "--num-topics", default=8, type=int)
     parser.add_argument("-w", "--num-words", default=1024, type=int)
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
@@ -130,7 +160,7 @@ if __name__ == '__main__':
     parser.add_argument("-n", "--num-steps", default=50, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
     parser.add_argument("-lr", "--learning-rate", default=0.01, type=float)
-    parser.add_argument("-b", "--batch-size", default=32, type=int)
+    parser.add_argument("-b", "--batch-size", default=8, type=int)
     parser.add_argument('--jit', action='store_true')
     args = parser.parse_args()
     main(args)
