@@ -8,8 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from pyro.infer import SVI, TraceMeanField_ELBO
 from pyro.optim import ClippedAdam
-from sklearn.datasets import fetch_20newsgroups
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from torch.optim import Adam
 from tqdm import trange
 
 from loading import load_document_file
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     documents, categories = load_document_file("data/2017_data.json")
 
     vectorizer = TfidfVectorizer(max_df=0.5, min_df=20)
-    docs = torch.from_numpy(vectorizer.fit_transform(list(documents.values())).toarray())
+    docs = torch.from_numpy(vectorizer.fit_transform(list(documents.values())[:1000]).toarray())
 
     vocab = pd.DataFrame(columns=['word', 'index'])
     vocab['word'] = vectorizer.get_feature_names()
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     )
     prodLDA.to(device)
 
-    optimizer = ClippedAdam({'lr': learning_rate})
+    optimizer = pyro.optim.Adam({"lr": learning_rate})
     svi = SVI(prodLDA.model, prodLDA.guide, optimizer, loss=TraceMeanField_ELBO())
     num_batches = int(math.ceil(docs.shape[0] / batch_size))
 
@@ -143,3 +143,9 @@ if __name__ == '__main__':
             running_loss += loss / batch_docs.size(0)
 
         bar.set_postfix(epoch_loss='{:.2e}'.format(running_loss))
+
+    beta = prodLDA.beta()
+    for i in range(beta.shape[0]):
+        sorted_, indices = torch.sort(beta[i], descending=True)
+        df = pd.DataFrame(indices[:20].numpy(), columns=['index'])
+        print(pd.merge(df, vocab[['index', 'word']], how='left', on='index')['word'].values)
