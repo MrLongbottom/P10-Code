@@ -17,6 +17,7 @@ def preprocessing(printouts=False, save=False):
     authors = {k: v for k, v in authors.items() if k not in bad_ids}
     taxonomies = {k: v for k, v in taxonomies.items() if k not in bad_ids}
     texts = new_texts
+    # TODO save down doc_id -> metadata mappings
 
     # tokenize (document token generators)
     if printouts:
