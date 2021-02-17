@@ -13,12 +13,12 @@ def load_document_file(filename):
                 continue
             meta = data['category']
             text = data['headline'] + ' ' + data['body']
-            documents[data["id"]] = text
+            documents[data["id"]] = text, meta
 
     print('Loaded ' + str(len(documents)) + ' documents.')
-    return documents, meta
+    return documents
 
 
 if __name__ == '__main__':
-    documents = load_document_file("data/2017_data.json")
+    documents, meta = load_document_file("data/2017_data.json")
     print()
