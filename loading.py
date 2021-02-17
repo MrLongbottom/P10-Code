@@ -5,6 +5,8 @@ def load_document_file(filename):
     print('Loading documents from "' + filename + '".')
     documents = {}
     categories = {}
+    authors = {}
+    taxonomies = {}
     with open(filename, "r") as json_file:
         for json_obj in json_file:
             try:
@@ -12,15 +14,16 @@ def load_document_file(filename):
             except:
                 print("problem with loading json")
                 continue
-            category = data['category']
             text = data['headline'] + ' ' + data['body']
             documents[data["id"]] = text
-            categories[data["id"]] = category
+            categories[data["id"]] = data['category']
+            authors[data["id"]] = data['author']
+            taxonomies[data["id"]] = data['taxonomy']
 
     print('Loaded ' + str(len(documents)) + ' documents.')
-    return documents, categories
+    return documents, categories, authors, taxonomies
 
 
 if __name__ == '__main__':
-    documents, categories = load_document_file("data/2017_data.json")
+    documents, categories, authors, taxonomies = load_document_file("data/2017_data.json")
     print()
