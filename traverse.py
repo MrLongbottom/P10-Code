@@ -10,7 +10,7 @@ startdir = "/home/simba/Desktop/Finished Data 2019/"
 
 def convert_process(path: str):
     """
-    This method create and anrticle and writes it to a file
+    This method create and article and writes it to a file
     :param path: the path of the article (xml)
     :return: write the result to file
     """
