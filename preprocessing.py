@@ -7,14 +7,15 @@ def preprocessing(printouts=False, save=False):
     # load data file
     if printouts:
         print("Loading dataset")
-    texts, categories = loading.load_document_file("data/2017_data.json")
+    texts, categories, authors, taxonomies = loading.load_document_file("data/2017_data.json")
 
     # removing duplicates from dictionaries
     rev = {v: k for k, v in texts.items()}
     new_texts = {v: k for k, v in rev.items()}
     bad_ids = [x for x in texts.keys() if x not in new_texts.keys()]
-
     categories = {k: v for k, v in categories.items() if k not in bad_ids}
+    authors = {k: v for k, v in authors.items() if k not in bad_ids}
+    taxonomies = {k: v for k, v in taxonomies.items() if k not in bad_ids}
     texts = new_texts
 
     # tokenize (document token generators)
