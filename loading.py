@@ -4,19 +4,21 @@ import json
 def load_document_file(filename):
     print('Loading documents from "' + filename + '".')
     documents = {}
+    categories = {}
     with open(filename, "r") as json_file:
         for json_obj in json_file:
             try:
                 data = json.loads(json_obj)
             except:
-                print("loaded the json wrong")
+                print("problem with loading json")
                 continue
-            meta = data['category']
+            category = data['category']
             text = data['headline'] + ' ' + data['body']
-            documents[data["id"]] = text, meta
+            documents[data["id"]] = text
+            categories[data["id"]] = category
 
     print('Loaded ' + str(len(documents)) + ' documents.')
-    return documents
+    return documents, meta
 
 
 if __name__ == '__main__':

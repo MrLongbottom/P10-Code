@@ -7,12 +7,12 @@ def preprocessing(printouts=False, save=False):
     # load data file
     if printouts:
         print("Loading dataset")
-    data = loading.load_document_file("data/2017_data.json")
+    data, cate = loading.load_document_file("data/2017_data.json")
 
     # tokenize (document token generators)
     if printouts:
         print("Tokenization")
-    documents = [gensim.utils.tokenize(x[0], lowercase=True, deacc=True, encoding='utf-8') for x in tqdm(data.values())]
+    documents = [gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8') for x in tqdm(data.values())]
 
     # normalize (currently doesn't work)
     # documents = [[y for y in gensim.utils.tokenize(x[0], lowercase=True, deacc=True, encoding='utf-8')] for x in data.values()]
