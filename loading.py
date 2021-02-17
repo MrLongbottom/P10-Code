@@ -18,9 +18,9 @@ def load_document_file(filename):
             categories[data["id"]] = category
 
     print('Loaded ' + str(len(documents)) + ' documents.')
-    return documents, meta
+    return documents, categories
 
 
 if __name__ == '__main__':
-    documents, meta = load_document_file("data/2017_data.json")
+    documents, categories = load_document_file("data/2017_data.json")
     print()
