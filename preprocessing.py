@@ -1,6 +1,7 @@
-import loading
 import gensim
 from tqdm import tqdm
+
+import loading
 
 
 def preprocessing(printouts=False, save=False):
@@ -22,7 +23,8 @@ def preprocessing(printouts=False, save=False):
     # tokenize (document token generators)
     if printouts:
         print("Tokenization")
-    documents = [gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8') for x in tqdm(texts.values())]
+    documents = [list(gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8')) for x in
+                 tqdm(texts.values())]
 
     # normalize (currently doesn't work)
     # documents = [[y for y in gensim.utils.tokenize(x[0], lowercase=True, deacc=True, encoding='utf-8')] for x in data.values()]
@@ -48,7 +50,7 @@ def preprocessing(printouts=False, save=False):
 
     if printouts:
         print('Preprocessing Finished.')
-    return corpora
+    return corpora, documents
 
 
 if __name__ == '__main__':

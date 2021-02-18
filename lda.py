@@ -2,16 +2,16 @@ import argparse
 import functools
 import logging
 
-import gensim as gensim
 import pyro
 import pyro.distributions as dist
 import torch
-from pyro.infer import SVI, JitTraceEnum_ELBO, Trace_ELBO
+from pyro.infer import SVI, JitTraceEnum_ELBO, Trace_ELBO, Predictive
 from pyro.optim import ClippedAdam
 from torch import nn
 from torch.distributions import constraints
+from tqdm import tqdm
 
-from loading import load_document_file
+from preprocessing import preprocessing
 
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
@@ -71,7 +71,7 @@ def parametrized_guide(predictor, data, num_words_per_doc, args):
 
     # Use an amortized guide for local variables.
     pyro.module("predictor", predictor)
-    for doc in pyro.plate("documents", args.num_docs):
+    for doc in pyro.plate("documents", args.num_docs, args.batch_size):
         # data = data[:, ind]
         # The neural network will operate on histograms rather than word
         # index vectors, so we'll convert the raw data to a histogram.
@@ -90,14 +90,11 @@ def main(args):
     pyro.clear_param_store()
     pyro.enable_validation(__debug__)
 
-    documents, categories = load_document_file("data/2017_data.json")
-    vocabulary = gensim.corpora.Dictionary(documents.values())
-    vocabulary.filter_extremes(no_below=10, no_above=0.5)
-    data = [torch.tensor(list(filter(lambda a: a != -1, vocabulary.doc2idx(doc))), dtype=torch.int64) for doc in
-            documents.values()]
-    data = [x for x in data if len(x) != 0]
+    # Loading data
+    corpora, documents = preprocessing()
+    data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64) for doc in documents]
     N = list(map(len, data))
-    args.num_words = len(vocabulary)
+    args.num_words = len(corpora)
     args.num_docs = len(data)
 
     # We'll train using SVI.
@@ -108,25 +105,25 @@ def main(args):
     elbo = Elbo(max_plate_nesting=2)
     optim = ClippedAdam({'lr': args.learning_rate})
     svi = SVI(model, guide, optim, elbo)
+
     logging.info('Step\tLoss')
-    for step in range(args.num_steps):
+    for step in tqdm(range(args.num_steps)):
         loss = svi.step(data, N, args=args)
-        logging.info('{: >5d}\t{}'.format(step, loss))
+        if step % 10 == 0:
+             logging.info('{: >5d}\t{}'.format(step, loss))
 
-
-    #     if step % 10 == 0:
-    #         logging.info('{: >5d}\t{}'.format(step, loss))
-    # loss = elbo.loss(model, guide, data, N, args=args)
-    # logging.info('final loss = {}'.format(loss))
-    # num_samples = 100
-    # predictive = Predictive(model, guide=guide, num_samples=num_samples)
-    # samples = predictive(data, N, args=args)
+    loss = elbo.loss(model, guide, data, N, args=args)
+    logging.info('final loss = {}'.format(loss))
+    num_samples = 100
+    predictive = Predictive(model, guide=guide, num_samples=num_samples)
+    samples = predictive(data, N, args=args)
+    print(samples)
 
 
 if __name__ == '__main__':
     assert pyro.__version__.startswith('1.5.2')
     parser = argparse.ArgumentParser(description="Amortized Latent Dirichlet Allocation")
-    parser.add_argument("-t", "--num-topics", default=10, type=int)
+    parser.add_argument("-t", "--num-topics", default=30, type=int)
     parser.add_argument("-w", "--num-words", default=1024, type=int)
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
     parser.add_argument("-n", "--num-steps", default=1000, type=int)
