@@ -9,10 +9,9 @@ import torch.nn.functional as F
 from pyro.infer import SVI, TraceMeanField_ELBO
 from pyro.optim import ClippedAdam
 from sklearn.feature_extraction.text import TfidfVectorizer
-from torch.optim import Adam
 from tqdm import trange
 
-from loading import load_document_file
+from processing.loading import load_document_file
 
 
 class Encoder(nn.Module):
@@ -95,7 +94,7 @@ class ProdLDA(nn.Module):
 
 if __name__ == '__main__':
     # Loading data
-    documents, categories = load_document_file("data/2017_data.json")
+    documents, categories = load_document_file("../data/2017_data.json")
 
     vectorizer = TfidfVectorizer(max_df=0.5, min_df=20)
     docs = torch.from_numpy(vectorizer.fit_transform(list(documents.values())[:1000]).toarray())

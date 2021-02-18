@@ -5,14 +5,13 @@ import logging
 import pyro
 import pyro.distributions as dist
 import torch
-from pyro.infer import SVI, JitTraceEnum_ELBO, Trace_ELBO, Predictive
+from pyro.infer import SVI, JitTraceEnum_ELBO, Trace_ELBO
 from pyro.optim import ClippedAdam
-from pyro.params.param_store import ParamStoreDict
 from torch import nn
 from torch.distributions import constraints
 from tqdm import tqdm
 
-from preprocessing import preprocessing
+from processing.preprocessing import preprocessing
 
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
@@ -116,7 +115,7 @@ def main(args):
     loss = elbo.loss(model, guide, data, N, args=args)
     logging.info('final loss = {}'.format(loss))
     # save model
-    torch.save({"model": predictor.state_dict(), "guide": guide}, "mymodel.pt")
+    torch.save({"model": predictor.state_dict(), "guide": guide}, "../mymodel.pt")
     pyro.get_param_store().save("mymodelparams.pt")
 
     # load model

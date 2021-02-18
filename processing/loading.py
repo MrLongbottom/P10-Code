@@ -25,5 +25,5 @@ def load_document_file(filename):
 
 
 if __name__ == '__main__':
-    documents, categories, authors, taxonomies = load_document_file("data/2017_data.json")
+    documents, categories, authors, taxonomies = load_document_file("../data/2017_data.json")
     print()

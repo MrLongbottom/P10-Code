@@ -2,7 +2,7 @@ import json
 import os
 import re
 from concurrent.futures import ProcessPoolExecutor
-import article_extraction as ae
+from processing import article_extraction as ae
 
 # Choose a standard directory to work on
 startdir = "/home/simba/Desktop/Finished Data 2017/"
