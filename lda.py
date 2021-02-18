@@ -88,7 +88,7 @@ def parametrized_guide(predictor, doc_word_data, category_data, args, batch_size
             lambda: torch.ones(args.num_topics, args.num_words),
             constraint=constraints.greater_than(0.5))
     with pyro.plate("topics", args.num_topics):
-        pyro.sample("topic_weights", dist.Gamma(topic_weights_posterior, 1.)).cuda()
+        pyro.sample("topic_weights", dist.Gamma(topic_weights_posterior, 1.))
         pyro.sample("topic_words", dist.Dirichlet(topic_words_posterior))
 
     category_weights_posterior = pyro.param(
