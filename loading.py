@@ -19,8 +19,8 @@ def load_document_file(filename):
     print('Loading documents from "' + filename + '".')
     documents = {}
     categories = []
-    with open(filename, "r") as json_file:
-        for index, json_obj in enumerate(json_file):
+    with open(filename, "r+", encoding='utf-8') as json_file:
+        for json_obj in json_file:
             try:
                 data = json.loads(json_obj)
             except:
@@ -28,10 +28,8 @@ def load_document_file(filename):
                 continue
             documents[data["id"]] = tokenize(data['headline'] + ' ' + data['body'])
             categories.append(data['category'])
-            if index == 1000:
-                break
     print('Loaded ' + str(len(documents)) + ' documents.')
-    return dict(list(documents.items())[:1000]), categories[:1000]
+    return documents, categories
 
 
 if __name__ == '__main__':
