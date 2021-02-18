@@ -126,12 +126,6 @@ def main(args):
     # pyro.get_param_store().load("mymodelparams.pt")
 
 
-    # num_samples = 100
-    # predictive = Predictive(model, guide=guide, num_samples=num_samples)
-    # samples = predictive(data, N, args=args)
-    # print(samples)
-
-
 if __name__ == '__main__':
     assert pyro.__version__.startswith('1.5.2')
     parser = argparse.ArgumentParser(description="Amortized Latent Dirichlet Allocation")
