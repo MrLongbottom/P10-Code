@@ -34,31 +34,33 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
         category_topics = pyro.sample("category_topics", dist.Dirichlet(topic_weights))
 
     # Locals.
-
+    cat = []
+    docs = []
     # Changed here to from vector(with) to iteration to support varying number
     # of words (num_words_per_doc).
     # with pyro.plate("documents", args.num_docs) as ind:
-    for doc in pyro.plate("documents", args.num_docs):
+    for index, doc in enumerate(pyro.plate("documents", args.num_docs)):
         # if doc_word_data is not None:
         #     doc_word_data = doc_word_data[:, doc]
         #
         # if category_data is not None:
         #     category_data = category_data[doc]
 
-        category_data = pyro.sample("doc_categories", dist.Categorical(category_weights), obs=category_data)
+        cat.append(pyro.sample("doc_categories", dist.Categorical(category_weights), obs=category_data))
 
         with pyro.plate("words_{}".format(doc), args.num_words_per_doc[doc]):
             # The word_topics variable is marginalized out during inference,
             # achieved by specifying infer={"enumerate": "parallel"} and using
             # TraceEnum_ELBO for inference. Thus we can ignore this variable in
             # the guide.
-            word_topics = pyro.sample("word_topics_{}".format(doc), dist.Categorical(category_topics[category_data]),
-                                      infer={"enumerate": "parallel"})  # Remove enum parralel?
-            doc_word_data = pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
-                                        obs=doc_word_data)
+            #TODO Crashes when generating data. Likely because data is None first time. Should work in SVI.step
+            word_topics = pyro.sample("word_topics_{}".format(doc), dist.Categorical(category_topics[int(cat[index][doc].item())]),
+                                      infer={"enumerate": "parallel"})  #TODO Remove enum parallel?
+            docs.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
+                                    obs=doc_word_data))
 
-    results = {"topic_weights": topic_weights, "topic_words": topic_words, "doc_word_data": doc_word_data,
-               "category_weights": category_weights, "category_topics": category_topics, "category_data": category_data}
+    results = {"topic_weights": topic_weights, "topic_words": topic_words, "doc_word_data": docs,
+               "category_weights": category_weights, "category_topics": category_topics, "category_data": cat}
 
     return results
 
@@ -93,7 +95,7 @@ def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
         "doc_category_posterior",
         lambda: torch.ones(args.num_topics),
         constraint=constraints.less_than(args.num_categories))
-    for doc in pyro.plate("documents", args.num_docs, batch_size):
+    with pyro.plate("documents", args.num_docs, batch_size) as ind:
         pyro.sample("doc_categories", dist.Categorical(doc_category_posterior))
 
 
@@ -111,11 +113,11 @@ def main(args):
     category_data = data["category_data"]
 
     # Loading data
-    corpora, documents = preprocessing()
-    data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64) for doc in documents]
-    num_words_per_doc = list(map(len, data))
-    args.num_words = len(corpora)
-    args.num_docs = len(data)
+    # corpora, documents = preprocessing()
+    # data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64) for doc in documents]
+    # num_words_per_doc = list(map(len, data))
+    # args.num_words = len(corpora)
+    # args.num_docs = len(data)
 
     # We'll train using SVI.
     logging.info('-' * 40)
@@ -125,6 +127,8 @@ def main(args):
     optim = ClippedAdam({'lr': args.learning_rate})
     svi = SVI(model, parametrized_guide, optim, elbo)
 
+    doc_word_data = torch.stack(doc_word_data) #TODO Make SVI run with lists of tensors
+    category_data = torch.Tensor(category_data)
     logging.info('Step\tLoss')
     for step in tqdm(range(args.num_steps)):
         loss = svi.step(doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
