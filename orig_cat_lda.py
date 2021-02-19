@@ -1,7 +1,9 @@
 import argparse
+import functools
 import logging
 
 import torch
+from torch import nn
 from torch.distributions import constraints
 
 import pyro
@@ -9,9 +11,8 @@ import pyro.distributions as dist
 from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO
 from pyro.optim import ClippedAdam
 
+import numpy as np
 from tqdm import tqdm
-
-from processing.preprocessing import preprocessing
 
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
@@ -34,27 +35,25 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
         category_topics = pyro.sample("category_topics", dist.Dirichlet(topic_weights))
 
     # Locals.
+    with pyro.plate("documents", args.num_docs) as ind:
+        if doc_word_data is not None:
+            with pyro.util.ignore_jit_warnings():
+                assert doc_word_data.shape == (args.num_words_per_doc, args.num_docs)  # Forces the 64x1000 shape
+            doc_word_data = doc_word_data[:, ind]
 
-    # Changed here to from vector(with) to iteration to support varying number
-    # of words (num_words_per_doc).
-    # with pyro.plate("documents", args.num_docs) as ind:
-    for doc in pyro.plate("documents", args.num_docs):
-        # if doc_word_data is not None:
-        #     doc_word_data = doc_word_data[:, doc]
-        #
-        # if category_data is not None:
-        #     category_data = category_data[doc]
+        if category_data is not None:
+            category_data = category_data[ind]
 
         category_data = pyro.sample("doc_categories", dist.Categorical(category_weights), obs=category_data)
 
-        with pyro.plate("words_{}".format(doc), args.num_words_per_doc[doc]):
+        with pyro.plate("words", args.num_words_per_doc):
             # The word_topics variable is marginalized out during inference,
             # achieved by specifying infer={"enumerate": "parallel"} and using
             # TraceEnum_ELBO for inference. Thus we can ignore this variable in
             # the guide.
-            word_topics = pyro.sample("word_topics_{}".format(doc), dist.Categorical(category_topics[category_data]),
-                                      infer={"enumerate": "parallel"})  # Remove enum parralel?
-            doc_word_data = pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
+            word_topics = pyro.sample("word_topics", dist.Categorical(category_topics[category_data]),
+                                      infer={"enumerate": "parallel"})
+            doc_word_data = pyro.sample("doc_words", dist.Categorical(topic_words[word_topics]),
                                         obs=doc_word_data)
 
     results = {"topic_weights": topic_weights, "topic_words": topic_words, "doc_word_data": doc_word_data,
@@ -66,13 +65,13 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
 def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
     # Use a conjugate guide for global variables.
     topic_weights_posterior = pyro.param(
-        "topic_weights_posterior",
-        lambda: torch.ones(args.num_topics),
-        constraint=constraints.positive)
+            "topic_weights_posterior",
+            lambda: torch.ones(args.num_topics),
+            constraint=constraints.positive)
     topic_words_posterior = pyro.param(
-        "topic_words_posterior",
-        lambda: torch.ones(args.num_topics, args.num_words),
-        constraint=constraints.greater_than(0.5))
+            "topic_words_posterior",
+            lambda: torch.ones(args.num_topics, args.num_words),
+            constraint=constraints.greater_than(0.5))
     with pyro.plate("topics", args.num_topics):
         pyro.sample("topic_weights", dist.Gamma(topic_weights_posterior, 1.))
         pyro.sample("topic_words", dist.Dirichlet(topic_words_posterior))
@@ -93,7 +92,7 @@ def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
         "doc_category_posterior",
         lambda: torch.ones(args.num_topics),
         constraint=constraints.less_than(args.num_categories))
-    for doc in pyro.plate("documents", args.num_docs, batch_size):
+    with pyro.plate("documents", args.num_docs, batch_size) as ind:
         pyro.sample("doc_categories", dist.Categorical(doc_category_posterior))
 
 
@@ -110,13 +109,6 @@ def main(args):
     doc_word_data = data["doc_word_data"]
     category_data = data["category_data"]
 
-    # Loading data
-    corpora, documents = preprocessing()
-    data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64) for doc in documents]
-    num_words_per_doc = list(map(len, data))
-    args.num_words = len(corpora)
-    args.num_docs = len(data)
-
     # We'll train using SVI.
     logging.info('-' * 40)
     logging.info('Training on {} documents'.format(args.num_docs))
@@ -124,7 +116,6 @@ def main(args):
     elbo = Elbo(max_plate_nesting=2)
     optim = ClippedAdam({'lr': args.learning_rate})
     svi = SVI(model, parametrized_guide, optim, elbo)
-
     logging.info('Step\tLoss')
     for step in tqdm(range(args.num_steps)):
         loss = svi.step(doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
@@ -132,15 +123,7 @@ def main(args):
             logging.info('{: >5d}\t{}'.format(step, loss))
     loss = elbo.loss(model, parametrized_guide, doc_word_data=doc_word_data, category_data=category_data, args=args)
     logging.info('final loss = {}'.format(loss))
-
-    # save model
-    pyro.get_param_store().save("mymodelparams.pt")
-
-    # load model
-    # saved_model_dict = torch.load("mymodel.pt")
-    # predictor.load_state_dict(saved_model_dict['model'])
-    # guide = saved_model_dict['guide']
-    # pyro.get_param_store().load("mymodelparams.pt")
+    print("debug string")
 
 
 if __name__ == '__main__':
@@ -148,10 +131,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Amortized Latent Dirichlet Allocation")
     parser.add_argument("-c", "--num-categories", default=32, type=int)
     parser.add_argument("-t", "--num-topics", default=64, type=int)
-    parser.add_argument("-w", "--num-words", default=1024,
-                        type=int)  # TODO Make num words be the number of unique words in dataset
-    parser.add_argument("-wd", "--num-words-per-doc", default=torch.tensor(torch.ones(1000) * 100))
+    parser.add_argument("-w", "--num-words", default=1024, type=int)
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
+    parser.add_argument("-wd", "--num-words-per-doc", default=64, type=int)
     parser.add_argument("-n", "--num-steps", default=1000, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
     parser.add_argument("-lr", "--learning-rate", default=0.01, type=float)
