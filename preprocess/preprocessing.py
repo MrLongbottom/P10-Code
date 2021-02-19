@@ -31,7 +31,8 @@ def preprocessing(printouts=False, save=True):
     # tokenize (document token generators)
     if printouts:
         print("Tokenization")
-    documents = [gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8') for x in tqdm(texts.values())]
+    documents = [list(gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8')) for x in
+                 tqdm(texts.values())]
 
     # Build Corpora object
     if printouts:
@@ -53,7 +54,7 @@ def preprocessing(printouts=False, save=True):
 
     if printouts:
         print('Preprocessing Finished.')
-    return corpora
+    return corpora, documents
 
 
 def load_document_file(filename):
