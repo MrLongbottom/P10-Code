@@ -5,12 +5,12 @@ import utility
 
 
 def preprocessing(printouts=False, save=True):
-    paths = utility.load_dict_file("paths.csv")
+    paths = utility.load_dict_file("../paths.csv")
 
     # load data file
     if printouts:
         print("Loading dataset")
-    texts, categories, authors, taxonomies = load_document_file(paths['2017_json'])
+    texts, categories, authors, taxonomies = load_document_file('../' + paths['2017_json'])
 
     # removing duplicates from dictionaries
     rev = {v: k for k, v in texts.items()}
@@ -23,10 +23,10 @@ def preprocessing(printouts=False, save=True):
     if save:
         if printouts:
             print("Saving data mapping files")
-        utility.save_dict_file(paths['id2raw_text'], texts)
-        utility.save_dict_file(paths['id2category'], categories)
-        utility.save_dict_file(paths['id2author'], authors)
-        utility.save_dict_file(paths['id2taxonomy'], taxonomies)
+        utility.save_dict_file('../' + paths['id2raw_text'], texts)
+        utility.save_dict_file('../' + paths['id2category'], categories)
+        utility.save_dict_file('../' + paths['id2author'], authors)
+        utility.save_dict_file('../' + paths['id2taxonomy'], taxonomies)
 
     # tokenize (document token generators)
     if printouts:
@@ -48,7 +48,7 @@ def preprocessing(printouts=False, save=True):
     if save:
         if printouts:
             print("Saving Corpora & Preprocessed Text")
-        corpora.save(paths['corpora'])
+        corpora.save('../' + paths['corpora'])
         # TODO save down id2word_id mapping and id2words mapping
 
     if printouts:
