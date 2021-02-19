@@ -35,8 +35,3 @@ def get_headline(root: ET.Element):
 def create_article(path: str):
     root = parse_xml(path)
     return {'id': get_article_id(path), 'headline': get_headline(root), 'body': get_body(root), 'category': get_category(root), 'author': get_author(root), 'taxonomy': get_taxonomy(root)}
-
-
-if __name__ == '__main__':
-    article = create_article("/home/simba/Desktop/Finished Data 2018/2018-01-01/TabletXML/00_01_1-_sektion_man_s001_01_forside__0101_201801010000_1009001634.xml")
-    print(article)
