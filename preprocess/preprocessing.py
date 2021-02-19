@@ -1,7 +1,7 @@
 import gensim
 from tqdm import tqdm
 
-from processing import loading
+from preprocess import loading
 
 
 def preprocessing(printouts=False, save=False):
