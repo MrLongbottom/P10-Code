@@ -8,7 +8,7 @@ def preprocessing(printouts=False, save=False):
     # load data file
     if printouts:
         print("Loading dataset")
-    texts, categories, authors, taxonomies = loading.load_document_file("../data/2017_data.json")
+    texts, categories, authors, taxonomies = loading.load_document_file("data/2017_data.json")
 
     # removing duplicates from dictionaries
     rev = {v: k for k, v in texts.items()}
