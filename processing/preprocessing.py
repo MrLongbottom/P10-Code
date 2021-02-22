@@ -1,7 +1,8 @@
 import gensim
 from tqdm import tqdm
-
+import itertools
 from processing import loading
+import torch
 
 
 def preprocessing(printouts=False, save=False):
@@ -47,10 +48,23 @@ def preprocessing(printouts=False, save=False):
         if printouts:
             print("Saving Corpora")
         corpora.save("generated_files/corpora")
-
     if printouts:
         print('Preprocessing Finished.')
     return corpora, documents
+
+
+def sparse_vector_document_representations(corpora, documents):
+    doc2bow = []
+    for doc in documents:
+        doc2bow.append(corpora.doc2bow(doc))
+    doc_keys = list(itertools.chain.from_iterable
+                    ([[[doc_id, word_id[0]] for word_id in doc2bow[doc_id]] for doc_id in range(len(doc2bow))]))
+    doc_values = []
+    for doc in tqdm(doc2bow):
+        [doc_values.append(y) for x, y in doc]
+    sparse_docs = torch.sparse.FloatTensor(torch.LongTensor(doc_keys).t(), torch.FloatTensor(doc_values),
+                                          torch.Size([corpora.num_docs, len(corpora)]))
+    return sparse_docs
 
 
 if __name__ == '__main__':
