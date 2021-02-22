@@ -3,11 +3,11 @@ import os
 import re
 from concurrent.futures import ProcessPoolExecutor
 from preprocess import article_extraction as ae
+import utility
 
 # Choose a standard directory to work on
-startdir = "/home/simba/Desktop/Finished Data 2017/"
-dataset_name = "data/2017_data.json"
-
+startdir = '../' + utility.load_dict_file('../paths.csv')['2017_data']
+enddir = '../' + utility.load_dict_file('../paths.csv')['2017_json']
 
 def convert_process(path: str):
     """
@@ -16,7 +16,7 @@ def convert_process(path: str):
     :return: write the result to file
     """
     article = ae.create_article(path)
-    with open(dataset_name, "a") as file:
+    with open(enddir, "a") as file:
         file.write(json.dumps(article, ensure_ascii=False) + '\n')
 
 
@@ -53,7 +53,7 @@ class Traverse:
 
 
 if __name__ == '__main__':
-    with open(dataset_name, "w") as file:
+    with open(enddir, "w") as file:
         pass
     t = Traverse(startdir, 8)
     t.traverse(startdir)

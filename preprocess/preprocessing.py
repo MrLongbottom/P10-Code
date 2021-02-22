@@ -1,14 +1,16 @@
 import gensim
 from tqdm import tqdm
+import json
+import utility
 
-from preprocess import loading
 
+def preprocessing(printouts=False, save=True):
+    paths = utility.load_dict_file("../paths.csv")
 
-def preprocessing(printouts=False, save=False):
     # load data file
     if printouts:
         print("Loading dataset")
-    texts, categories, authors, taxonomies = loading.load_document_file("data/2017_data.json")
+    texts, categories, authors, taxonomies = load_document_file('../' + paths['2017_json'])
 
     # removing duplicates from dictionaries
     rev = {v: k for k, v in texts.items()}
@@ -18,18 +20,19 @@ def preprocessing(printouts=False, save=False):
     authors = {k: v for k, v in authors.items() if k not in bad_ids}
     taxonomies = {k: v for k, v in taxonomies.items() if k not in bad_ids}
     texts = new_texts
-    # TODO save down doc_id -> metadata mappings
+    if save:
+        if printouts:
+            print("Saving data mapping files")
+        utility.save_dict_file('../' + paths['id2raw_text'], texts)
+        utility.save_dict_file('../' + paths['id2category'], categories)
+        utility.save_dict_file('../' + paths['id2author'], authors)
+        utility.save_dict_file('../' + paths['id2taxonomy'], taxonomies)
 
     # tokenize (document token generators)
     if printouts:
         print("Tokenization")
     documents = [list(gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8')) for x in
                  tqdm(texts.values())]
-
-    # normalize (currently doesn't work)
-    # documents = [[y for y in gensim.utils.tokenize(x[0], lowercase=True, deacc=True, encoding='utf-8')] for x in data.values()]
-    # norm_documents = gensim.models.normmodel.NormModel(corpus=[corpora.doc2bow(x) for x in documents], norm='l1')
-    # norm_corpora = gensim.corpora.Dictionary.from_corpus(norm_documents)
 
     # Build Corpora object
     if printouts:
@@ -45,13 +48,37 @@ def preprocessing(printouts=False, save=False):
     corpora.compactify()
     if save:
         if printouts:
-            print("Saving Corpora")
-        corpora.save("generated_files/corpora")
+            print("Saving Corpora & Preprocessed Text")
+        corpora.save('../' + paths['corpora'])
+        # TODO save down id2word_id mapping and id2words mapping
 
     if printouts:
         print('Preprocessing Finished.')
     return corpora, documents
 
 
+def load_document_file(filename):
+    print('Loading documents from "' + filename + '".')
+    documents = {}
+    categories = {}
+    authors = {}
+    taxonomies = {}
+    with open(filename, "r") as json_file:
+        for json_obj in json_file:
+            try:
+                data = json.loads(json_obj)
+            except:
+                print("problem with loading json")
+                continue
+            text = data['headline'] + ' ' + data['body']
+            documents[data["id"]] = text
+            categories[data["id"]] = data['category']
+            authors[data["id"]] = data['author']
+            taxonomies[data["id"]] = data['taxonomy']
+
+    print('Loaded ' + str(len(documents)) + ' documents.')
+    return documents, categories, authors, taxonomies
+
+
 if __name__ == '__main__':
-    corpora = preprocessing(printouts=True)
+    preprocessing(printouts=True, save=True)
