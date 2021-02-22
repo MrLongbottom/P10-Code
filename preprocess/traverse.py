@@ -9,6 +9,7 @@ import utility
 startdir = '../' + utility.load_dict_file('../paths.csv')['2017_data']
 enddir = '../' + utility.load_dict_file('../paths.csv')['2017_json']
 
+
 def convert_process(path: str):
     """
     This method create and article and writes it to a file
