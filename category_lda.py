@@ -34,8 +34,8 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
         category_topics = pyro.sample("category_topics", dist.Dirichlet(topic_weights))
 
     # Locals.
-    cat = []
-    docs = []
+    category_list = []
+    document_list = []
     # Changed here to from vector(with) to iteration to support varying number
     # of words (num_words_per_doc).
     # with pyro.plate("documents", args.num_docs) as ind:
@@ -46,21 +46,32 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
         # if category_data is not None:
         #     category_data = category_data[doc]
 
-        cat.append(pyro.sample("doc_categories", dist.Categorical(category_weights), obs=category_data))
+        category_list.append(
+            pyro.sample("doc_categories_{}".format(doc), dist.Categorical(category_weights), obs=category_data))
 
         with pyro.plate("words_{}".format(doc), args.num_words_per_doc[doc]):
             # The word_topics variable is marginalized out during inference,
             # achieved by specifying infer={"enumerate": "parallel"} and using
             # TraceEnum_ELBO for inference. Thus we can ignore this variable in
             # the guide.
-            #TODO Crashes when generating data. Likely because data is None first time. Should work in SVI.step
-            word_topics = pyro.sample("word_topics_{}".format(doc), dist.Categorical(category_topics[int(cat[index][doc].item())]),
-                                      infer={"enumerate": "parallel"})  #TODO Remove enum parallel?
-            docs.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
-                                    obs=doc_word_data))
+            if category_data is None:
+                word_topics = pyro.sample("word_topics_{}".format(doc),
+                                          dist.Categorical(category_topics[int(category_list[index].item())]),
+                                          infer={"enumerate": "parallel"})
+            else:
+                word_topics = pyro.sample("word_topics_{}".format(doc),
+                                          dist.Categorical(category_topics[int(category_list[index][doc].item())]),
+                                          infer={"enumerate": "parallel"})  # TODO Remove enum parallel?
 
-    results = {"topic_weights": topic_weights, "topic_words": topic_words, "doc_word_data": docs,
-               "category_weights": category_weights, "category_topics": category_topics, "category_data": cat}
+            if doc_word_data is None:
+                document_list.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
+                                                 obs=doc_word_data))
+            else:
+                document_list.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
+                                                 obs=doc_word_data[:, doc]))
+
+    results = {"topic_weights": topic_weights, "topic_words": topic_words, "doc_word_data": document_list,
+               "category_weights": category_weights, "category_topics": category_topics, "category_data": category_list}
 
     return results
 
@@ -95,8 +106,8 @@ def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
         "doc_category_posterior",
         lambda: torch.ones(args.num_topics),
         constraint=constraints.less_than(args.num_categories))
-    with pyro.plate("documents", args.num_docs, batch_size) as ind:
-        pyro.sample("doc_categories", dist.Categorical(doc_category_posterior))
+    for doc in pyro.plate("documents", args.num_docs, batch_size):
+        pyro.sample("doc_categories_{}".format(doc), dist.Categorical(doc_category_posterior))
 
 
 def main(args):
@@ -127,13 +138,13 @@ def main(args):
     optim = ClippedAdam({'lr': args.learning_rate})
     svi = SVI(model, parametrized_guide, optim, elbo)
 
-    doc_word_data = torch.stack(doc_word_data) #TODO Make SVI run with lists of tensors
+    doc_word_data = torch.transpose(torch.stack(doc_word_data), 0, 1)  # TODO Make SVI run with lists of tensors
     category_data = torch.Tensor(category_data)
     logging.info('Step\tLoss')
     for step in tqdm(range(args.num_steps)):
         loss = svi.step(doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
-        if step % 10 == 0:
-            logging.info('{: >5d}\t{}'.format(step, loss))
+        # if step % 10 == 0:
+        logging.info('{: >5d}\t{}'.format(step, loss))
     loss = elbo.loss(model, parametrized_guide, doc_word_data=doc_word_data, category_data=category_data, args=args)
     logging.info('final loss = {}'.format(loss))
 
