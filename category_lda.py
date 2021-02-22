@@ -46,22 +46,22 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
         # if category_data is not None:
         #     category_data = category_data[doc]
 
-        category_list.append(
-            pyro.sample("doc_categories_{}".format(doc), dist.Categorical(category_weights), obs=category_data))
+        if category_data is None:
+            category_list.append(
+                pyro.sample("doc_categories_{}".format(doc), dist.Categorical(category_weights), obs=category_data))
+        else:
+            category_list.append(
+                pyro.sample("doc_categories_{}".format(doc), dist.Categorical(category_weights),
+                            obs=category_data[doc]))
 
         with pyro.plate("words_{}".format(doc), args.num_words_per_doc[doc]):
             # The word_topics variable is marginalized out during inference,
             # achieved by specifying infer={"enumerate": "parallel"} and using
             # TraceEnum_ELBO for inference. Thus we can ignore this variable in
             # the guide.
-            if category_data is None:
-                word_topics = pyro.sample("word_topics_{}".format(doc),
-                                          dist.Categorical(category_topics[int(category_list[index].item())]),
-                                          infer={"enumerate": "parallel"})
-            else:
-                word_topics = pyro.sample("word_topics_{}".format(doc),
-                                          dist.Categorical(category_topics[int(category_list[index][doc].item())]),
-                                          infer={"enumerate": "parallel"})  # TODO Remove enum parallel?
+            word_topics = pyro.sample("word_topics_{}".format(doc),
+                                      dist.Categorical(category_topics[int(category_list[index].item())]),
+                                      infer={"enumerate": "parallel"})  # TODO Remove enum parallel?
 
             if doc_word_data is None:
                 document_list.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
