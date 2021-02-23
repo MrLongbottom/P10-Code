@@ -33,26 +33,25 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
         category_weights = pyro.sample("category_weights", dist.Gamma(1. / args.num_categories, 1.))
         category_topics = pyro.sample("category_topics", dist.Dirichlet(topic_weights))
 
-    # Locals.
     category_list = []
     document_list = []
-    # Changed here to from vector(with) to iteration to support varying number
-    # of words (num_words_per_doc).
-    # with pyro.plate("documents", args.num_docs) as ind:
-    for index, doc in enumerate(pyro.plate("documents", args.num_docs)):
-        # if doc_word_data is not None:
-        #     doc_word_data = doc_word_data[:, doc]
-        #
-        # if category_data is not None:
-        #     category_data = category_data[doc]
 
-        if category_data is None:
-            category_list.append(
-                pyro.sample("doc_categories_{}".format(doc), dist.Categorical(category_weights), obs=category_data))
+    # Changed here from vector(with) to iteration to support varying number of words (num_words_per_doc).
+
+    # Locals.
+    for index, doc in enumerate(pyro.plate("documents", args.num_docs)):
+        if doc_word_data is not None:
+            cur_doc_word_data = doc_word_data[:, doc]
         else:
-            category_list.append(
-                pyro.sample("doc_categories_{}".format(doc), dist.Categorical(category_weights),
-                            obs=category_data[doc]))
+            cur_doc_word_data = None
+
+        if category_data is not None:
+            cur_category_data = category_data[doc]
+        else:
+            cur_category_data = None
+
+        category_list.append(
+            pyro.sample("doc_categories_{}".format(doc), dist.Categorical(category_weights), obs=cur_category_data))
 
         with pyro.plate("words_{}".format(doc), args.num_words_per_doc[doc]):
             # The word_topics variable is marginalized out during inference,
@@ -63,12 +62,8 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
                                       dist.Categorical(category_topics[int(category_list[index].item())]),
                                       infer={"enumerate": "parallel"})  # TODO Remove enum parallel?
 
-            if doc_word_data is None:
-                document_list.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
-                                                 obs=doc_word_data))
-            else:
-                document_list.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
-                                                 obs=doc_word_data[:, doc]))
+            document_list.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
+                                             obs=cur_doc_word_data))
 
     results = {"topic_weights": topic_weights, "topic_words": topic_words, "doc_word_data": document_list,
                "category_weights": category_weights, "category_topics": category_topics, "category_data": category_list}
