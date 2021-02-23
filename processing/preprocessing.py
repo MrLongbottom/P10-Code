@@ -42,12 +42,13 @@ def preprocessing(printouts=False, save=False):
         print("Filtering out extreme words")
     corpora.filter_extremes(no_below=10, no_above=0.1)
 
-    # clean and save corpora
+    # clean and save corpora & preprocessed documents
     corpora.compactify()
     if save:
         if printouts:
             print("Saving Corpora")
         corpora.save("generated_files/corpora")
+        # TODO save preprocessed documents
     if printouts:
         print('Preprocessing Finished.')
     return corpora, documents
@@ -67,5 +68,10 @@ def sparse_vector_document_representations(corpora, documents):
     return sparse_docs
 
 
+def load_preprocessing():
+    corpora = gensim.corpora.Dictionary.load("generated_files/corpora")
+    return corpora
+
+
 if __name__ == '__main__':
-    corpora = preprocessing(printouts=True)
+    corpora = preprocessing(printouts=True, save=True)
