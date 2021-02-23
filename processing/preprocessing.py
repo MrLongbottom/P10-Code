@@ -63,7 +63,7 @@ def sparse_vector_document_representations(corpora, documents):
     for doc in tqdm(doc2bow):
         [doc_values.append(y) for x, y in doc]
     sparse_docs = torch.sparse.FloatTensor(torch.LongTensor(doc_keys).t(), torch.FloatTensor(doc_values),
-                                          torch.Size([corpora.num_docs, len(corpora)]))
+                                          torch.Size([corpora.num_docs, len(corpora)])).to_dense()
     return sparse_docs
 
 
