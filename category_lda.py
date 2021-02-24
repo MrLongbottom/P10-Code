@@ -1,15 +1,18 @@
 import argparse
 import logging
+import functools
 
 import torch
 from torch.distributions import constraints
 
 import pyro
 import pyro.distributions as dist
-from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO
+import pyro.poutine as poutine
+from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO, Trace_ELBO
 from pyro.optim import ClippedAdam
 
 from tqdm import tqdm
+import numpy as np
 
 from processing.preprocessing import preprocessing
 
@@ -41,7 +44,7 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
     # Locals.
     for index, doc in enumerate(pyro.plate("documents", args.num_docs)):
         if doc_word_data is not None:
-            cur_doc_word_data = doc_word_data[:, doc]
+            cur_doc_word_data = doc_word_data[doc]
         else:
             cur_doc_word_data = None
 
@@ -110,7 +113,12 @@ def main(args):
     logging.info('Generating data')
     pyro.set_rng_seed(0)
     pyro.clear_param_store()
-    pyro.enable_validation(__debug__)
+    pyro.enable_validation(True)
+
+    tracemodel = functools.partial(model, args=args)
+    trace = poutine.trace(tracemodel).get_trace()
+    trace.compute_log_prob()  # optional, but allows printing of log_prob shapes
+    print(trace.format_shapes())
 
     # We can generate synthetic data directly by calling the model.
     data = model(args=args)
@@ -129,9 +137,13 @@ def main(args):
     logging.info('-' * 40)
     logging.info('Training on {} documents'.format(args.num_docs))
     Elbo = JitTraceEnum_ELBO if args.jit else TraceEnum_ELBO
-    elbo = Elbo(max_plate_nesting=2)
+    elbo = Elbo(max_plate_nesting=2)  # TODO problem may be in plate nesting or traceEnum. Look at forum post
     optim = ClippedAdam({'lr': args.learning_rate})
     svi = SVI(model, parametrized_guide, optim, elbo)
+
+    loss_fn = pyro.infer.TraceEnum_ELBO().differentiable_loss
+    loss = loss_fn(model, parametrized_guide, doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
+    loss.backward()
 
     doc_word_data = torch.transpose(torch.stack(doc_word_data), 0, 1)  # TODO Make SVI run with lists of tensors
     category_data = torch.Tensor(category_data)
@@ -160,7 +172,7 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--num-topics", default=64, type=int)
     parser.add_argument("-w", "--num-words", default=1024,
                         type=int)  # TODO Make num words be the number of unique words in dataset
-    parser.add_argument("-wd", "--num-words-per-doc", default=torch.tensor(torch.ones(1000) * 100))
+    parser.add_argument("-wd", "--num-words-per-doc", default=(np.ones(1000) * 100).astype(int).tolist())
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
     parser.add_argument("-n", "--num-steps", default=1000, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
