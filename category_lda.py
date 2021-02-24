@@ -8,40 +8,30 @@ import pyro
 import pyro.distributions as dist
 from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO
 from pyro.optim import ClippedAdam
-
+import numpy as np
 from tqdm import tqdm
-
-from processing.preprocessing import preprocessing
 
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
 
-# This is a fully generative model of a batch of documents.
-# data is a [num_words_per_doc, num_documents] shaped array of word ids
-# (specifically it is not a histogram). We assume in this simple example
-# that all documents have the same number of words.
 def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
-    # Globals.
+    # Topics
     with pyro.plate("topics", args.num_topics):
-        # topic_weights does not seem to come from the usual LDA plate notation, but seems to give an indication of
-        # the importance of topics. It might be from the amortized LDA paper.
         topic_weights = pyro.sample("topic_weights", dist.Gamma(1. / args.num_topics, 1.))
         topic_words = pyro.sample("topic_words",
                                   dist.Dirichlet(torch.ones(args.num_words) / args.num_words))
-
+    # Categories
     with pyro.plate("categories", args.num_categories):
         category_weights = pyro.sample("category_weights", dist.Gamma(1. / args.num_categories, 1.))
         category_topics = pyro.sample("category_topics", dist.Dirichlet(topic_weights))
 
-    category_list = []
-    document_list = []
+    doc_category_list = []
+    doc_word_list = []
 
-    # Changed here from vector(with) to iteration to support varying number of words (num_words_per_doc).
-
-    # Locals.
+    # Documents
     for index, doc in enumerate(pyro.plate("documents", args.num_docs)):
         if doc_word_data is not None:
-            cur_doc_word_data = doc_word_data[:, doc]
+            cur_doc_word_data = doc_word_data[doc]
         else:
             cur_doc_word_data = None
 
@@ -50,23 +40,23 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
         else:
             cur_category_data = None
 
-        category_list.append(
+        doc_category_list.append(
             pyro.sample("doc_categories_{}".format(doc), dist.Categorical(category_weights), obs=cur_category_data))
 
+        # Words
         with pyro.plate("words_{}".format(doc), args.num_words_per_doc[doc]):
-            # The word_topics variable is marginalized out during inference,
-            # achieved by specifying infer={"enumerate": "parallel"} and using
-            # TraceEnum_ELBO for inference. Thus we can ignore this variable in
-            # the guide.
             word_topics = pyro.sample("word_topics_{}".format(doc),
-                                      dist.Categorical(category_topics[int(category_list[index].item())]),
-                                      infer={"enumerate": "parallel"})  # TODO Remove enum parallel?
+                                      dist.Categorical(category_topics[int(doc_category_list[index].item())]))
 
-            document_list.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
+            doc_word_list.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
                                              obs=cur_doc_word_data))
 
-    results = {"topic_weights": topic_weights, "topic_words": topic_words, "doc_word_data": document_list,
-               "category_weights": category_weights, "category_topics": category_topics, "category_data": category_list}
+    results = {"topic_weights": topic_weights,
+               "topic_words": topic_words,
+               "doc_word_data": doc_word_list,
+               "category_weights": category_weights,
+               "category_topics": category_topics,
+               "category_data": doc_category_list}
 
     return results
 
@@ -101,8 +91,8 @@ def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
         "doc_category_posterior",
         lambda: torch.ones(args.num_topics),
         constraint=constraints.less_than(args.num_categories))
-    for doc in pyro.plate("documents", args.num_docs, batch_size):
-        pyro.sample("doc_categories_{}".format(doc), dist.Categorical(doc_category_posterior))
+    for doc in pyro.plate("documents", args.num_docs, args.batch_size):
+        pyro.sample("doc_categories_{}".format(doc), dist.Delta(doc_category_posterior, event_dim=1), infer={'is_auxiliary': True})
 
 
 def main(args):
@@ -117,6 +107,9 @@ def main(args):
 
     doc_word_data = data["doc_word_data"]
     category_data = data["category_data"]
+
+    # Torchifying
+    category_data = torch.Tensor(category_data)
 
     # Loading data
     # corpora, documents = preprocessing()
@@ -133,13 +126,12 @@ def main(args):
     optim = ClippedAdam({'lr': args.learning_rate})
     svi = SVI(model, parametrized_guide, optim, elbo)
 
-    doc_word_data = torch.transpose(torch.stack(doc_word_data), 0, 1)  # TODO Make SVI run with lists of tensors
-    category_data = torch.Tensor(category_data)
     logging.info('Step\tLoss')
     for step in tqdm(range(args.num_steps)):
         loss = svi.step(doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
         # if step % 10 == 0:
         logging.info('{: >5d}\t{}'.format(step, loss))
+        print(loss)
     loss = elbo.loss(model, parametrized_guide, doc_word_data=doc_word_data, category_data=category_data, args=args)
     logging.info('final loss = {}'.format(loss))
 
@@ -160,7 +152,7 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--num-topics", default=64, type=int)
     parser.add_argument("-w", "--num-words", default=1024,
                         type=int)  # TODO Make num words be the number of unique words in dataset
-    parser.add_argument("-wd", "--num-words-per-doc", default=torch.tensor(torch.ones(1000) * 100))
+    parser.add_argument("-wd", "--num-words-per-doc", default=np.random.randint(low=5, high=1000, size=1000))
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
     parser.add_argument("-n", "--num-steps", default=1000, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
