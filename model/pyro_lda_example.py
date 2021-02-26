@@ -1,24 +1,3 @@
-# Copyright (c) 2017-2019 Uber Technologies, Inc.
-# SPDX-License-Identifier: Apache-2.0
-
-"""
-This example implements amortized Latent Dirichlet Allocation [1],
-demonstrating how to marginalize out discrete assignment variables in a Pyro
-model. This model and inference algorithm treat documents as vectors of
-categorical variables (vectors of word ids), and collapses word-topic
-assignments using Pyro's enumeration. We use PyTorch's reparametrized Gamma and
-Dirichlet distributions [2], avoiding the need for Laplace approximations as in
-[1]. Following [1] we use the Adam optimizer and clip gradients.
-
-**References:**
-
-[1] Akash Srivastava, Charles Sutton. ICLR 2017.
-    "Autoencoding Variational Inference for Topic Models"
-    https://arxiv.org/pdf/1703.01488.pdf
-[2] Martin Jankowiak, Fritz Obermeyer. ICML 2018.
-    "Pathwise gradients beyond the reparametrization trick"
-    https://arxiv.org/pdf/1806.01851.pdf
-"""
 import argparse
 import functools
 import logging
@@ -28,9 +7,10 @@ from torch import nn
 from torch.distributions import constraints
 
 import pyro
+import pandas as pd
 import matplotlib.pyplot as plt
 import pyro.distributions as dist
-from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO
+from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO, Predictive
 from pyro.optim import ClippedAdam
 from tqdm import tqdm
 
@@ -43,7 +23,7 @@ logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.IN
 # data is a [num_words_per_doc, num_documents] shaped array of word ids
 # (specifically it is not a histogram). We assume in this simple example
 # that all documents have the same number of words.
-def model(data=None, args=None, batch_size=None):
+def model(data=None, args=None):
     # Globals.
     with pyro.plate("topics", args.num_topics):
         topic_weights = pyro.sample("topic_weights", dist.Gamma(1. / args.num_topics, 1.))
@@ -53,8 +33,8 @@ def model(data=None, args=None, batch_size=None):
     # Locals.
     with pyro.plate("documents", args.num_docs) as ind:
         if data is not None:
-            with pyro.util.ignore_jit_warnings():
-                assert data.shape == (args.num_words_per_doc, args.num_docs)
+            # with pyro.util.ignore_jit_warnings():
+            #     assert data.shape == (args.num_words_per_doc, args.num_docs)
             data = data[:, ind]
         doc_topics = pyro.sample("doc_topics", dist.Dirichlet(topic_weights))
         with pyro.plate("words", args.num_words_per_doc):
@@ -88,30 +68,50 @@ def make_predictor(args):
     return nn.Sequential(*layers)
 
 
-def parametrized_guide(predictor, data, args, batch_size=None):
+def parametrized_guide(predictor, data, args):
     # Use a conjugate guide for global variables.
     topic_weights_posterior = pyro.param(
-            "topic_weights_posterior",
-            lambda: torch.ones(args.num_topics),
-            constraint=constraints.positive)
+        "topic_weights_posterior",
+        lambda: torch.ones(args.num_topics),
+        constraint=constraints.positive)
     topic_words_posterior = pyro.param(
-            "topic_words_posterior",
-            lambda: torch.ones(args.num_topics, args.num_words),
-            constraint=constraints.greater_than(0.5))
+        "topic_words_posterior",
+        lambda: torch.ones(args.num_topics, args.num_words),
+        constraint=constraints.greater_than(0.5))
     with pyro.plate("topics", args.num_topics):
         pyro.sample("topic_weights", dist.Gamma(topic_weights_posterior, 1.))
         pyro.sample("topic_words", dist.Dirichlet(topic_words_posterior))
 
     # Use an amortized guide for local variables.
+    if data is None:
+        args.batch_size = None
     pyro.module("predictor", predictor)
-    with pyro.plate("documents", args.num_docs, batch_size) as ind:
+    with pyro.plate("documents", args.num_docs, args.batch_size) as ind:
         data = data[:, ind]
         # The neural network will operate on histograms rather than word
         # index vectors, so we'll convert the raw data to a histogram.
         counts = (torch.zeros(args.num_words, ind.size(0))
-                       .scatter_add(0, data, torch.ones(data.shape)))
+                  .scatter_add(0, data, torch.ones(data.shape)))
         doc_topics = predictor(counts.transpose(0, 1))
         pyro.sample("doc_topics", dist.Delta(doc_topics, event_dim=1))
+
+
+def print_top_topic_words(data, vocab, args):
+    predictive = Predictive(model, num_samples=100, return_sites=['topic_words'])
+
+    i = 0
+    batch_size = 32
+    idx = torch.arange(i * batch_size,
+                       min((i + 1) * batch_size, len(data)))
+    batch_docs = data[idx, :].cpu()
+    samples = predictive(batch_docs, args)
+
+    beta = samples['topic_words'].mean(dim=0).squeeze().detach()
+
+    for i in range(beta.shape[0]):
+        sorted_, indices = torch.sort(beta[i], descending=True)
+        df = pd.DataFrame(indices[:20].numpy(), columns=['index'])
+        print(f"Topic {i}: {[vocab[x] for x in list(df.values[:,0])]}\n")
 
 
 def main(args):
@@ -143,7 +143,7 @@ def main(args):
     logging.info('Step\tLoss')
     losses = []
     for step in tqdm(range(args.num_steps)):
-        loss = svi.step(data, args=args, batch_size=args.batch_size)
+        loss = svi.step(data, args=args)
         losses.append(loss)
         if step % 10 == 0:
             logging.info('{: >5d}\t{}'.format(step, loss))
@@ -152,21 +152,20 @@ def main(args):
     plt.xlabel("step")
     plt.ylabel("loss")
     plt.show()
-    loss = elbo.loss(model, guide, data, args=args)
-    logging.info('final loss = {}'.format(loss))
+    print_top_topic_words(data, corpora, args)
 
 
 if __name__ == '__main__':
     assert pyro.__version__.startswith('1.5.2')
     parser = argparse.ArgumentParser(description="Amortized Latent Dirichlet Allocation")
-    parser.add_argument("-t", "--num-topics", default=8, type=int)
+    parser.add_argument("-t", "--num-topics", default=20, type=int)
     parser.add_argument("-w", "--num-words", default=1024, type=int)
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
     parser.add_argument("-wd", "--num-words-per-doc", default=64, type=int)
-    parser.add_argument("-n", "--num-steps", default=5000, type=int)
+    parser.add_argument("-n", "--num-steps", default=1000, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
     parser.add_argument("-lr", "--learning-rate", default=0.01, type=float)
-    parser.add_argument("-b", "--batch-size", default=3, type=int)
+    parser.add_argument("-b", "--batch-size", default=1, type=int)
     parser.add_argument('--jit', action='store_true')
     args = parser.parse_args()
     main(args)
