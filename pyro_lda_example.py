@@ -28,9 +28,13 @@ from torch import nn
 from torch.distributions import constraints
 
 import pyro
+import matplotlib.pyplot as plt
 import pyro.distributions as dist
 from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO
 from pyro.optim import ClippedAdam
+from tqdm import tqdm
+
+from processing.preprocessing import preprocessing
 
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
@@ -116,7 +120,16 @@ def main(args):
     pyro.clear_param_store()
 
     # We can generate synthetic data directly by calling the model.
-    true_topic_weights, true_topic_words, data = model(args=args)
+    # true_topic_weights, true_topic_words, pre_data = model(args=args)
+
+    corpora, documents = preprocessing()
+    data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64) for doc in documents]
+    big_len = max([len(x) for x in data])
+    data = [torch.cat((x, torch.ones(big_len - len(x), dtype=torch.int64))) for x in data]
+    args.num_words_per_doc = big_len
+    args.num_words = len(corpora)
+    args.num_docs = len(data)
+    data = torch.stack(data).T
 
     # We'll train using SVI.
     logging.info('-' * 40)
@@ -128,10 +141,17 @@ def main(args):
     optim = ClippedAdam({'lr': args.learning_rate})
     svi = SVI(model, guide, optim, elbo)
     logging.info('Step\tLoss')
-    for step in range(args.num_steps):
+    losses = []
+    for step in tqdm(range(args.num_steps)):
         loss = svi.step(data, args=args, batch_size=args.batch_size)
+        losses.append(loss)
         if step % 10 == 0:
             logging.info('{: >5d}\t{}'.format(step, loss))
+    plt.plot(losses)
+    plt.title("ELBO")
+    plt.xlabel("step")
+    plt.ylabel("loss")
+    plt.show()
     loss = elbo.loss(model, guide, data, args=args)
     logging.info('final loss = {}'.format(loss))
 
@@ -143,10 +163,10 @@ if __name__ == '__main__':
     parser.add_argument("-w", "--num-words", default=1024, type=int)
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
     parser.add_argument("-wd", "--num-words-per-doc", default=64, type=int)
-    parser.add_argument("-n", "--num-steps", default=1000, type=int)
+    parser.add_argument("-n", "--num-steps", default=5000, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
     parser.add_argument("-lr", "--learning-rate", default=0.01, type=float)
-    parser.add_argument("-b", "--batch-size", default=32, type=int)
+    parser.add_argument("-b", "--batch-size", default=3, type=int)
     parser.add_argument('--jit', action='store_true')
     args = parser.parse_args()
     main(args)

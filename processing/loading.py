@@ -8,7 +8,7 @@ def load_document_file(filename):
     authors = {}
     taxonomies = {}
     with open(filename, "r") as json_file:
-        for json_obj in json_file:
+        for index, json_obj in enumerate(json_file):
             try:
                 data = json.loads(json_obj)
             except:
@@ -19,7 +19,8 @@ def load_document_file(filename):
             categories[data["id"]] = data['category']
             authors[data["id"]] = data['author']
             taxonomies[data["id"]] = data['taxonomy']
-
+            if index == 1000:
+                break
     print('Loaded ' + str(len(documents)) + ' documents.')
     return documents, categories, authors, taxonomies
 
