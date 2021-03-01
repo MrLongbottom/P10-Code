@@ -121,17 +121,19 @@ def main(args):
     # print(trace.format_shapes())
 
     # We can generate synthetic data directly by calling the model.
-    # data = model(args=args)
-    #
-    # doc_word_data = data["doc_word_data"]
-    # category_data = data["category_data"]
+    data = model(args=args)
+
+    gen_doc_word_data = data["doc_word_data"]
+    gen_category_data = data["category_data"]
 
     # Loading data
-    corpora, documents = preprocessing()
+    corpora, documents, category_corpora, category_list = preprocessing()
     doc_word_data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64) for doc in documents]
-    num_words_per_doc = list(map(len, doc_word_data))
+    category_data = [torch.tensor(list(filter(lambda a: a != -1, category_corpora.doc2idx(cat))), dtype=torch.int64) for cat in category_list]
+    args.num_words_per_doc = list(map(len, doc_word_data))
     args.num_words = len(corpora)
     args.num_docs = len(doc_word_data)
+    args.num_categories = len(category_corpora)
 
     # We'll train using SVI.
     logging.info('-' * 40)
@@ -163,7 +165,7 @@ def main(args):
     plt.title("ELBO")
     plt.xlabel("step")
     plt.ylabel("loss")
-    plt.savefig("loss-random_doc_lengths.png")
+    plt.savefig("loss-2017.png")
     plt.show()
 
     print('topic_weights_posterior = ', pyro.param("topic_weights_posterior"))

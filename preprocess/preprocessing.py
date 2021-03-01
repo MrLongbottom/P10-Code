@@ -34,6 +34,8 @@ def preprocessing(printouts=False, save=True):
         print("Tokenization")
     documents = [list(gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8')) for x in
                  tqdm(texts.values())]
+    category_list = list([x] for x in categories.values())
+    category_corpora = gensim.corpora.Dictionary(category_list)
 
     # Build Corpora object
     if printouts:
@@ -54,7 +56,7 @@ def preprocessing(printouts=False, save=True):
         # TODO save down id2word_id mapping and id2words mapping
     if printouts:
         print('Preprocessing Finished.')
-    return corpora, documents
+    return corpora, documents, category_corpora, category_list
 
 
 def load_document_file(filename):
@@ -63,7 +65,7 @@ def load_document_file(filename):
     categories = {}
     authors = {}
     taxonomies = {}
-    with open(filename, "r") as json_file:
+    with open(filename, "r", encoding="utf8") as json_file:
         for json_obj in json_file:
             try:
                 data = json.loads(json_obj)
