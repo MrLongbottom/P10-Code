@@ -6,7 +6,6 @@ from preprocess import article_extraction as ae
 import utility
 
 # Choose a standard directory to work on
-
 startdir = '../' + utility.load_dict_file('../paths.csv')['2017_data']
 enddir = '../' + utility.load_dict_file('../paths.csv')['2017_json']
 
