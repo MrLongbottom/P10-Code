@@ -13,6 +13,7 @@ from pyro.optim import ClippedAdam
 
 from tqdm import tqdm
 import numpy as np
+import matplotlib.pyplot as plt
 
 from processing.preprocessing import preprocessing
 
@@ -62,8 +63,7 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
             # TraceEnum_ELBO for inference. Thus we can ignore this variable in
             # the guide.
             word_topics = pyro.sample("word_topics_{}".format(doc),
-                                      dist.Categorical(category_topics[int(category_list[index].item())]),
-                                      infer={"enumerate": "parallel"})  # TODO Remove enum parallel?
+                                      dist.Categorical(category_topics[int(category_list[index].item())]))  # TODO Remove enum parallel?
 
             document_list.append(pyro.sample("doc_words_{}".format(doc), dist.Categorical(topic_words[word_topics]),
                                              obs=cur_doc_word_data))
@@ -83,7 +83,7 @@ def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
     topic_words_posterior = pyro.param(
         "topic_words_posterior",
         lambda: torch.ones(args.num_topics, args.num_words),
-        constraint=constraints.greater_than(0.5))
+        constraint=constraints.greater_than(0.5))  # TODO constraint may be too restrictive
     with pyro.plate("topics", args.num_topics):
         pyro.sample("topic_weights", dist.Gamma(topic_weights_posterior, 1.))
         pyro.sample("topic_words", dist.Dirichlet(topic_words_posterior))
@@ -102,10 +102,10 @@ def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
 
     doc_category_posterior = pyro.param(
         "doc_category_posterior",
-        lambda: torch.ones(args.num_topics),
+        lambda: torch.ones(args.num_categories),
         constraint=constraints.less_than(args.num_categories))
     for doc in pyro.plate("documents", args.num_docs, batch_size):
-        pyro.sample("doc_categories_{}".format(doc), dist.Categorical(doc_category_posterior))
+        pyro.sample("doc_categories_{}".format(doc), dist.Delta(doc_category_posterior, event_dim=1), infer={'is_auxiliary': True})
 
 
 def main(args):
@@ -115,23 +115,23 @@ def main(args):
     pyro.clear_param_store()
     pyro.enable_validation(True)
 
-    tracemodel = functools.partial(model, args=args)
-    trace = poutine.trace(tracemodel).get_trace()
-    trace.compute_log_prob()  # optional, but allows printing of log_prob shapes
-    print(trace.format_shapes())
+    # tracemodel = functools.partial(model, args=args)
+    # trace = poutine.trace(tracemodel).get_trace()
+    # trace.compute_log_prob()  # optional, but allows printing of log_prob shapes
+    # print(trace.format_shapes())
 
     # We can generate synthetic data directly by calling the model.
-    data = model(args=args)
-
-    doc_word_data = data["doc_word_data"]
-    category_data = data["category_data"]
+    # data = model(args=args)
+    #
+    # doc_word_data = data["doc_word_data"]
+    # category_data = data["category_data"]
 
     # Loading data
-    # corpora, documents = preprocessing()
-    # data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64) for doc in documents]
-    # num_words_per_doc = list(map(len, data))
-    # args.num_words = len(corpora)
-    # args.num_docs = len(data)
+    corpora, documents = preprocessing()
+    doc_word_data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64) for doc in documents]
+    num_words_per_doc = list(map(len, doc_word_data))
+    args.num_words = len(corpora)
+    args.num_docs = len(doc_word_data)
 
     # We'll train using SVI.
     logging.info('-' * 40)
@@ -141,19 +141,36 @@ def main(args):
     optim = ClippedAdam({'lr': args.learning_rate})
     svi = SVI(model, parametrized_guide, optim, elbo)
 
-    loss_fn = pyro.infer.TraceEnum_ELBO().differentiable_loss
-    loss = loss_fn(model, parametrized_guide, doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
-    loss.backward()
+    # loss_fn = pyro.infer.TraceEnum_ELBO().differentiable_loss
+    # loss = loss_fn(model, parametrized_guide, doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
+    # loss.backward()
 
-    doc_word_data = torch.transpose(torch.stack(doc_word_data), 0, 1)  # TODO Make SVI run with lists of tensors
-    category_data = torch.Tensor(category_data)
+    # doc_word_data = torch.transpose(torch.stack(doc_word_data), 0, 1)  # TODO Make SVI run with lists of tensors
+    # category_data = torch.Tensor(category_data)
+
+    losses = []
+
     logging.info('Step\tLoss')
     for step in tqdm(range(args.num_steps)):
         loss = svi.step(doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
-        # if step % 10 == 0:
-        logging.info('{: >5d}\t{}'.format(step, loss))
+        losses.append(loss)
+        if step % 10 == 0:
+            logging.info('{: >5d}\t{}'.format(step, loss))
     loss = elbo.loss(model, parametrized_guide, doc_word_data=doc_word_data, category_data=category_data, args=args)
     logging.info('final loss = {}'.format(loss))
+
+    plt.plot(losses)
+    plt.title("ELBO")
+    plt.xlabel("step")
+    plt.ylabel("loss")
+    plt.savefig("loss-random_doc_lengths.png")
+    plt.show()
+
+    print('topic_weights_posterior = ', pyro.param("topic_weights_posterior"))
+    print('topic_words_posterior = ', pyro.param("topic_words_posterior"))
+    print('category_weights_posterior = ', pyro.param("category_weights_posterior"))
+    print('category_topics_posterior = ', pyro.param("category_topics_posterior"))
+    print('doc_category_posterior = ', pyro.param("doc_category_posterior"))
 
     # save model
     pyro.get_param_store().save("mymodelparams.pt")
@@ -172,9 +189,9 @@ if __name__ == '__main__':
     parser.add_argument("-t", "--num-topics", default=64, type=int)
     parser.add_argument("-w", "--num-words", default=1024,
                         type=int)  # TODO Make num words be the number of unique words in dataset
-    parser.add_argument("-wd", "--num-words-per-doc", default=(np.ones(1000) * 100).astype(int).tolist())
+    parser.add_argument("-wd", "--num-words-per-doc", default=np.random.randint(low=5, high=1000, size=1000))
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
-    parser.add_argument("-n", "--num-steps", default=1000, type=int)
+    parser.add_argument("-n", "--num-steps", default=1500, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
     parser.add_argument("-lr", "--learning-rate", default=0.01, type=float)
     parser.add_argument("-b", "--batch-size", default=32, type=int)
