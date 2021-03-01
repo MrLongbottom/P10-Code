@@ -1,4 +1,5 @@
 import itertools
+import pickle
 import time
 from functools import partial
 from multiprocessing import Pool
@@ -34,6 +35,7 @@ from preprocess.preprocessing import preprocessing
 
 
 def random_initialize(documents, doc_topic, topic_word):
+    print("Random Initilization")
     for d, doc in tqdm(enumerate(documents)):
         zCurrentDoc = []
         for w in doc:
@@ -78,18 +80,21 @@ if __name__ == '__main__':
     iterationNum = 50
     Z = []
     K = 10
-    corpora, documents = preprocessing("data/2017_data.json")
-    N = len(documents)
-    M = len(corpora.token2id)
-    data = [list(filter(lambda a: a != -1, corpora.doc2idx(doc))) for doc in documents]
+    with open("../preprocess/generated_files/doc_word_matrix", 'rb') as file:
+        doc_word_matrix = pickle.load(file)
+    doc_word_matrix = np.array(doc_word_matrix.to_dense(), dtype=int)
+    N = doc_word_matrix.shape[0]
+    M = doc_word_matrix.shape[1]
+    doc_word_matrix = [np.nonzero(x)[0] for x in doc_word_matrix]
+
 
     document_topic_dist = np.zeros([N, K]) + alpha
     topic_word_dist = np.zeros([K, M]) + beta
     nz = np.zeros([K]) + M * beta
-    random_initialize(data, document_topic_dist, topic_word_dist)
+    random_initialize(doc_word_matrix, document_topic_dist, topic_word_dist)
     for i in tqdm(range(0, iterationNum)):
-        gibbsSampling(data, document_topic_dist, topic_word_dist)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(data))
+        gibbsSampling(doc_word_matrix, document_topic_dist, topic_word_dist)
+        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix))
 
     topic_words = []
     maxTopicWordsNum = 10
