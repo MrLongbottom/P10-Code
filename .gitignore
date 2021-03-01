@@ -1,6 +1,5 @@
 data/*
-!data/preprocess
-data/preprocess/*
+preprocess/generated_files/*
 
 !empty
 

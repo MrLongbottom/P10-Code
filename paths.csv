@@ -1,6 +1,6 @@
-2017_data,C:\Users\petme\Downloads\Finished Data 2017
-2018_data,C:\Users\petme\Downloads\Finished Data 2018
-2019_data,C:\Users\petme\Downloads\Finished Data 2018
+2017_data,data/Finished Data 2017
+2018_data,data/Finished Data 2018
+2019_data,data/Finished Data 2018
 2017_json,data/2017_data.json
 2018_json,data/2018_data.json
 2019_json,data/2019_data.json
