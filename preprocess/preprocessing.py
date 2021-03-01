@@ -2,6 +2,9 @@ import gensim
 from tqdm import tqdm
 import json
 import utility
+import itertools
+import torch.sparse
+import pickle
 
 
 def preprocessing(printouts=False, save=True):
@@ -46,15 +49,37 @@ def preprocessing(printouts=False, save=True):
 
     # clean and save corpora
     corpora.compactify()
+
+    doc2bow = []
+    for doc in documents:
+        doc2bow.append(corpora.doc2bow(doc))
+
+    doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
+
     if save:
         if printouts:
             print("Saving Corpora & Preprocessed Text")
         corpora.save('../' + paths['corpora'])
-        # TODO save down id2word_id mapping and id2words mapping
+        with open('../' + paths['doc2bow'], "wb") as file:
+            pickle.dump(doc2bow, file)
+        with open('../' + paths['doc_word_matrix'], "wb") as file:
+            pickle.dump(doc_word_matrix, file)
+        utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
 
     if printouts:
         print('Preprocessing Finished.')
-    return corpora, documents
+    return corpora, documents, doc2bow, doc_word_matrix
+
+
+def sparse_vector_document_representations(corpora, doc2bow):
+    doc_keys = list(itertools.chain.from_iterable
+                    ([[[doc_id, word_id[0]] for word_id in doc2bow[doc_id]] for doc_id in range(len(doc2bow))]))
+    doc_values = []
+    for doc in tqdm(doc2bow):
+        [doc_values.append(y) for x, y in doc]
+    sparse_docs = torch.sparse.FloatTensor(torch.LongTensor(doc_keys).t(), torch.FloatTensor(doc_values),
+                                          torch.Size([corpora.num_docs, len(corpora)]))
+    return sparse_docs
 
 
 def load_document_file(filename):
@@ -63,7 +88,7 @@ def load_document_file(filename):
     categories = {}
     authors = {}
     taxonomies = {}
-    with open(filename, "r") as json_file:
+    with open(filename, "r", errors='ignore') as json_file:
         for json_obj in json_file:
             try:
                 data = json.loads(json_obj)
@@ -80,5 +105,13 @@ def load_document_file(filename):
     return documents, categories, authors, taxonomies
 
 
+def prepro_file_load(file_name):
+    # TODO utility load
+    # TODO corpora load
+    # TODO pickle load
+    raise NotImplementedError
+
+
 if __name__ == '__main__':
-    preprocessing(printouts=True, save=True)
+    info = preprocessing(printouts=True, save=True)
+    print('Finished Preprocessing')
