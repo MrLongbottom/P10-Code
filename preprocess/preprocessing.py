@@ -51,6 +51,8 @@ def preprocessing(printouts=False, save=True):
     for doc in documents:
         doc2bow.append(corpora.doc2bow(doc))
 
+    doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
+
     if save:
         if printouts:
             print("Saving Corpora & Preprocessed Text")
@@ -59,7 +61,18 @@ def preprocessing(printouts=False, save=True):
 
     if printouts:
         print('Preprocessing Finished.')
-    return corpora, documents, doc2bow
+    return corpora, documents, doc2bow, doc_word_matrix
+
+
+def sparse_vector_document_representations(corpora, doc2bow:
+    doc_keys = list(itertools.chain.from_iterable
+                    ([[[doc_id, word_id[0]] for word_id in doc2bow[doc_id]] for doc_id in range(len(doc2bow))]))
+    doc_values = []
+    for doc in tqdm(doc2bow):
+        [doc_values.append(y) for x, y in doc]
+    sparse_docs = torch.sparse.FloatTensor(torch.LongTensor(doc_keys).t(), torch.FloatTensor(doc_values),
+                                          torch.Size([corpora.num_docs, len(corpora)]))
+    return sparse_docs
 
 
 def load_document_file(filename):
