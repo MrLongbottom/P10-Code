@@ -4,6 +4,7 @@ import json
 import utility
 import itertools
 import torch.sparse
+import pickle
 
 
 def preprocessing(printouts=False, save=True):
@@ -59,7 +60,11 @@ def preprocessing(printouts=False, save=True):
         if printouts:
             print("Saving Corpora & Preprocessed Text")
         corpora.save('../' + paths['corpora'])
-        # TODO save down id2word_id mapping and id2words mapping
+        with open('../' + paths['doc2bow'], "wb") as file:
+            pickle.dump(doc2bow, file)
+        with open('../' + paths['doc_word_matrix'], "wb") as file:
+            pickle.dump(doc_word_matrix, file)
+        utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
 
     if printouts:
         print('Preprocessing Finished.')
@@ -98,6 +103,13 @@ def load_document_file(filename):
 
     print('Loaded ' + str(len(documents)) + ' documents.')
     return documents, categories, authors, taxonomies
+
+
+def prepro_file_load(file_name):
+    # TODO utility load
+    # TODO corpora load
+    # TODO pickle load
+    raise NotImplementedError
 
 
 if __name__ == '__main__':

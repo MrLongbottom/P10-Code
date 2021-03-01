@@ -20,7 +20,7 @@ def save_dict_file(filepath, content, separator=','):
     Saves content of list as a vector in a file, similar to a Word2Vec document.
     :param separator: separator between values
     :param filepath: path of file to save.
-    :param content: list of content to save.
+    :param content: dict or iterator of content to save.
     :return: None
     """
     print('Saving file "' + filepath + '".')
