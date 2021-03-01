@@ -2,6 +2,8 @@ import gensim
 from tqdm import tqdm
 import json
 import utility
+import itertools
+import torch.sparse
 
 
 def preprocessing(printouts=False, save=True):
@@ -64,7 +66,7 @@ def preprocessing(printouts=False, save=True):
     return corpora, documents, doc2bow, doc_word_matrix
 
 
-def sparse_vector_document_representations(corpora, doc2bow:
+def sparse_vector_document_representations(corpora, doc2bow):
     doc_keys = list(itertools.chain.from_iterable
                     ([[[doc_id, word_id[0]] for word_id in doc2bow[doc_id]] for doc_id in range(len(doc2bow))]))
     doc_values = []
