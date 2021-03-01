@@ -13,3 +13,5 @@ id2taxonomy,preprocess/generated_files/taxonomies.csv
 doc2bow,preprocess/generated_files/doc2bow
 doc_word_matrix,preprocess/generated_files/doc_word_matrix
 id2word,preprocess/generated_files/id2word.csv
+id2doc_name,preprocess/generated_files/id2doc.csv
+doc2word_ids,preprocess/generated_files/doc2word.csv

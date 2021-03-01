@@ -19,13 +19,15 @@ def preprocessing(printouts=False, save=True):
     rev = {v: k for k, v in texts.items()}
     new_texts = {v: k for k, v in rev.items()}
     bad_ids = [x for x in texts.keys() if x not in new_texts.keys()]
-    categories = {k: v for k, v in categories.items() if k not in bad_ids}
-    authors = {k: v for k, v in authors.items() if k not in bad_ids}
-    taxonomies = {k: v for k, v in taxonomies.items() if k not in bad_ids}
-    texts = new_texts
+    id2doc_file = {num_id: name_id for num_id, name_id in enumerate(new_texts.keys())}
+    categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
+    authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
+    taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
+    texts = {e: v for e, (k, v) in enumerate(texts.items()) if k not in bad_ids}
     if save:
         if printouts:
             print("Saving data mapping files")
+        utility.save_dict_file('../' + paths['id2doc_name'], id2doc_file)
         utility.save_dict_file('../' + paths['id2raw_text'], texts)
         utility.save_dict_file('../' + paths['id2category'], categories)
         utility.save_dict_file('../' + paths['id2author'], authors)
@@ -47,8 +49,16 @@ def preprocessing(printouts=False, save=True):
         print("Filtering out extreme words")
     corpora.filter_extremes(no_below=10, no_above=0.1)
 
-    # clean and save corpora
+    # clean up and construct & save files
     corpora.compactify()
+
+    doc2id = []
+    doc2 = []
+    for doc in documents:
+        doc_id = corpora.doc2idx(doc)
+        doc2.append([doc[i] for i in range(len(doc)) if doc_id[i] != -1])
+        doc2id.append([x for x in doc_id if x != -1])
+    documents = doc2
 
     doc2bow = []
     for doc in documents:
@@ -65,6 +75,8 @@ def preprocessing(printouts=False, save=True):
         with open('../' + paths['doc_word_matrix'], "wb") as file:
             pickle.dump(doc_word_matrix, file)
         utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
+        utility.save_dict_file('../' + paths['id2pre_text'], documents, separator=':')
+        utility.save_dict_file('../' + paths['doc2word_ids'], doc2id, separator=':')
 
     if printouts:
         print('Preprocessing Finished.')
@@ -88,7 +100,7 @@ def load_document_file(filename):
     categories = {}
     authors = {}
     taxonomies = {}
-    with open(filename, "r", errors='ignore') as json_file:
+    with open(filename, "r", encoding='utf-8', errors='ignore') as json_file:
         for json_obj in json_file:
             try:
                 data = json.loads(json_obj)
@@ -107,6 +119,7 @@ def load_document_file(filename):
 
 def prepro_file_load(file_name):
     # TODO utility load
+    # TODO utility load with separator
     # TODO corpora load
     # TODO pickle load
     raise NotImplementedError
