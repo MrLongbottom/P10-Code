@@ -15,7 +15,7 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 
-from processing.preprocessing import preprocessing
+from preprocess.preprocessing import preprocessing
 
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 

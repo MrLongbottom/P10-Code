@@ -1,7 +1,8 @@
-generated_files/*
-!generated_files/empty
-LDA/model/*
-!LDA/model/empty
+data/*
+!data/preprocess
+data/preprocess/*
+
+!empty
 
 # Created by https://www.toptal.com/developers/gitignore/api/pycharm,python,git
 # Edit at https://www.toptal.com/developers/gitignore?templates=pycharm,python,git
@@ -32,7 +33,6 @@ LDA/model/*
 .idea/**/dictionaries
 .idea/**/shelf
 .idea/*
-/data
 
 # Generated files
 .idea/**/contentModel.xml

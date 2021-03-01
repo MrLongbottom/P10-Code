@@ -1,0 +1,12 @@
+2017_data,C:\Users\petme\Downloads\Finished Data 2017
+2018_data,C:\Users\petme\Downloads\Finished Data 2018
+2019_data,C:\Users\petme\Downloads\Finished Data 2018
+2017_json,data/2017_data.json
+2018_json,data/2018_data.json
+2019_json,data/2019_data.json
+corpora,data/preprocess/corpora
+id2raw_text,data/preprocess/raw_texts.csv
+id2pre_text,data/preprocess/pre_texts.csv
+id2category,data/preprocess/categories.csv
+id2author,data/preprocess/authors.csv
+id2taxonomy,data/preprocess/taxonomies.csv
