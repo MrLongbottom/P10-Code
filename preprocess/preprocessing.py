@@ -46,6 +46,11 @@ def preprocessing(printouts=False, save=True):
 
     # clean and save corpora
     corpora.compactify()
+
+    doc2bow = []
+    for doc in documents:
+        doc2bow.append(corpora.doc2bow(doc))
+
     if save:
         if printouts:
             print("Saving Corpora & Preprocessed Text")
@@ -54,7 +59,7 @@ def preprocessing(printouts=False, save=True):
 
     if printouts:
         print('Preprocessing Finished.')
-    return corpora, documents
+    return corpora, documents, doc2bow
 
 
 def load_document_file(filename):
@@ -63,7 +68,7 @@ def load_document_file(filename):
     categories = {}
     authors = {}
     taxonomies = {}
-    with open(filename, "r") as json_file:
+    with open(filename, "r", errors='ignore') as json_file:
         for json_obj in json_file:
             try:
                 data = json.loads(json_obj)
@@ -81,4 +86,5 @@ def load_document_file(filename):
 
 
 if __name__ == '__main__':
-    preprocessing(printouts=True, save=True)
+    info = preprocessing(printouts=True, save=True)
+    print('Finished Preprocessing')
