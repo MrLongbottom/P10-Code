@@ -23,7 +23,7 @@ def preprocessing(printouts=False, save=True):
     categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
     authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
     taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
-    texts = {e: v for e, (k, v) in enumerate(texts.items()) if k not in bad_ids}
+    texts = {e: v.replace('\n', '') for e, (k, v) in enumerate(texts.items()) if k not in bad_ids}
     if save:
         if printouts:
             print("Saving data mapping files")
@@ -75,8 +75,8 @@ def preprocessing(printouts=False, save=True):
         with open('../' + paths['doc_word_matrix'], "wb") as file:
             pickle.dump(doc_word_matrix, file)
         utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
-        utility.save_dict_file('../' + paths['id2pre_text'], documents, separator=':')
-        utility.save_dict_file('../' + paths['doc2word_ids'], doc2id, separator=':')
+        utility.save_dict_file('../' + paths['id2pre_text'], documents)
+        utility.save_dict_file('../' + paths['doc2word_ids'], doc2id)
 
     if printouts:
         print('Preprocessing Finished.')
@@ -118,11 +118,18 @@ def load_document_file(filename):
 
 
 def prepro_file_load(file_name):
-    # TODO utility load
-    # TODO utility load with separator
-    # TODO corpora load
-    # TODO pickle load
-    raise NotImplementedError
+    paths = utility.load_dict_file("../paths.csv")
+    if file_name not in paths:
+        raise Exception('File name not in paths file')
+    else:
+        file_path = '../' + paths[file_name]
+        if file_path[-4:] == '.csv':
+            return utility.load_dict_file(file_path)
+        elif file_path[-7:] == '.pickle':
+            with open(file_path, 'rb') as file:
+                return pickle.load(file)
+        else:
+            return gensim.corpora.Dictionary.load(file_path)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-def load_dict_file(filepath, separator=','):
+def load_dict_file(filepath, separator='@'):
     """
     Loads the content of a file as a dictionary
     :param filepath: path of file to be loaded. Should include folders and file type.
@@ -15,7 +15,7 @@ def load_dict_file(filepath, separator=','):
     return dictionary
 
 
-def load_pair_file(filepath, separator=','):
+def load_pair_file(filepath, separator='@'):
     with open(filepath, 'r', encoding='utf-8') as file:
         listen = []
         for line in file.readlines():
@@ -27,7 +27,7 @@ def load_pair_file(filepath, separator=','):
     return listen
 
 
-def save_dict_file(filepath, content, separator=','):
+def save_dict_file(filepath, content, separator='@'):
     """
     Saves content of list as a vector in a file, similar to a Word2Vec document.
     :param separator: separator between values
