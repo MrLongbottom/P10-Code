@@ -11,27 +11,27 @@ from sklearn.feature_extraction.text import CountVectorizer
 from preprocess.preprocessing import preprocessing
 
 
-# def gibbs(documents, doc_topic, topic_word):
-#     with Pool(processes=8) as p:
-#         max_ = len(documents)
-#         with tqdm(total=max_) as pbar:
-#             for score in p.imap(partial(sampling, doc_topic, topic_word), enumerate(documents)):
-#                 pbar.update()
-#
-#
-# def sampling(doc_topic, topic_word, doc):
-#     d_index = doc[0]
-#     for w_index, word in enumerate(doc[1]):
-#         topic = Z[d_index][w_index]
-#         doc_topic[d_index, topic] -= 1
-#         topic_word[topic, word] -= 1
-#         nz[topic] -= 1
-#         pz = np.divide(np.multiply(doc_topic[d_index, :], topic_word[:, word]), nz)
-#         topic = np.random.multinomial(1, pz / pz.sum()).argmax()
-#         Z[d_index][w_index] = topic
-#         doc_topic[d_index, topic] += 1
-#         topic_word[topic, word] += 1
-#         nz[topic] += 1
+def gibbs(documents, doc_topic, topic_word):
+    with Pool(processes=8) as p:
+        max_ = len(documents)
+        with tqdm(total=max_) as pbar:
+            for score in p.imap(partial(sampling, doc_topic, topic_word), sets):
+                pbar.update()
+
+
+def sampling(doc_topic, topic_word, documents):
+    for d_index, doc in documents:
+        for w_index, word in enumerate(doc):
+            topic = Z[d_index][w_index]
+            doc_topic[d_index, topic] -= 1
+            topic_word[topic, word] -= 1
+            nz[topic] -= 1
+            pz = np.divide(np.multiply(doc_topic[d_index, :], topic_word[:, word]), nz)
+            topic = np.random.multinomial(1, pz / pz.sum()).argmax()
+            Z[d_index][w_index] = topic
+            doc_topic[d_index, topic] += 1
+            topic_word[topic, word] += 1
+            nz[topic] += 1
 
 
 def random_initialize(documents, doc_topic, topic_word):
@@ -48,19 +48,19 @@ def random_initialize(documents, doc_topic, topic_word):
         Z.append(zCurrentDoc)
 
 
-def gibbsSampling(documents, doc_topic, topic_word):
-    for d_index, doc in enumerate(documents):
-        for w_index, word in enumerate(doc):
-            topic = Z[d_index][w_index]
-            doc_topic[d_index, topic] -= 1
-            topic_word[topic, word] -= 1
-            nz[topic] -= 1
-            pz = np.divide(np.multiply(doc_topic[d_index, :], topic_word[:, word]), nz)
-            topic = np.random.multinomial(1, pz / pz.sum()).argmax()
-            Z[d_index][w_index] = topic
-            doc_topic[d_index, topic] += 1
-            topic_word[topic, word] += 1
-            nz[topic] += 1
+# def gibbsSampling(documents, doc_topic, topic_word):
+#     for d_index, doc in enumerate(documents):
+#         for w_index, word in enumerate(doc):
+#             topic = Z[d_index][w_index]
+#             doc_topic[d_index, topic] -= 1
+#             topic_word[topic, word] -= 1
+#             nz[topic] -= 1
+#             pz = np.divide(np.multiply(doc_topic[d_index, :], topic_word[:, word]), nz)
+#             topic = np.random.multinomial(1, pz / pz.sum()).argmax()
+#             Z[d_index][w_index] = topic
+#             doc_topic[d_index, topic] += 1
+#             topic_word[topic, word] += 1
+#             nz[topic] += 1
 
 
 def perplexity(data):
@@ -72,6 +72,12 @@ def perplexity(data):
             ll = ll + np.log(((topic_word_dist[:, w] / nz) * (document_topic_dist[d, :] / nd[d])).sum())
             n = n + 1
     return np.exp(ll / (-n))
+
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
 
 
 if __name__ == '__main__':
@@ -86,14 +92,14 @@ if __name__ == '__main__':
     N = doc_word_matrix.shape[0]
     M = doc_word_matrix.shape[1]
     doc_word_matrix = [np.nonzero(x)[0] for x in doc_word_matrix]
-
+    sets = [list(x) for x in chunks(list(enumerate(doc_word_matrix)), int(len(doc_word_matrix) / 8))]
 
     document_topic_dist = np.zeros([N, K]) + alpha
     topic_word_dist = np.zeros([K, M]) + beta
     nz = np.zeros([K]) + M * beta
     random_initialize(doc_word_matrix, document_topic_dist, topic_word_dist)
     for i in tqdm(range(0, iterationNum)):
-        gibbsSampling(doc_word_matrix, document_topic_dist, topic_word_dist)
+        gibbs(doc_word_matrix, document_topic_dist, topic_word_dist)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix))
 
     topic_words = []
