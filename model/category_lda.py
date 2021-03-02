@@ -150,7 +150,7 @@ def main(args):
     svi = SVI(model, parametrized_guide, optim, elbo)
 
     # If generating data from the model, turn category list to tensor
-    # category_data = torch.Tensor(category_data)
+    # gen_category_data = torch.Tensor(gen_category_data)
 
     losses = []
 
