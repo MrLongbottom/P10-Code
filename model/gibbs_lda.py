@@ -6,6 +6,9 @@ from multiprocessing import Pool, Array
 
 import numpy as np
 from tqdm import tqdm
+from sklearn.feature_extraction.text import CountVectorizer
+
+from preprocess.preprocessing import preprocessing
 
 
 def gibbs(documents, doc_topic, topic_word):
@@ -58,6 +61,21 @@ def random_initialize(documents, doc_topic, topic_word):
         Z.append(zCurrentDoc)
 
 
+# def gibbsSampling(documents, doc_topic, topic_word):
+#     for d_index, doc in enumerate(documents):
+#         for w_index, word in enumerate(doc):
+#             topic = Z[d_index][w_index]
+#             doc_topic[d_index, topic] -= 1
+#             topic_word[topic, word] -= 1
+#             nz[topic] -= 1
+#             pz = np.divide(np.multiply(doc_topic[d_index, :], topic_word[:, word]), nz)
+#             topic = np.random.multinomial(1, pz / pz.sum()).argmax()
+#             Z[d_index][w_index] = topic
+#             doc_topic[d_index, topic] += 1
+#             topic_word[topic, word] += 1
+#             nz[topic] += 1
+
+
 def perplexity(data):
     nd = np.sum(document_topic_dist, 1)
     n = 0
@@ -104,7 +122,7 @@ if __name__ == '__main__':
     nz = np.zeros([K]) + M * beta
     random_initialize(doc_word_matrix, document_topic_dist, topic_word_dist)
     for i in tqdm(range(0, iterationNum)):
-        gibbs(sets, document_topic_dist, topic_word_dist)
+        gibbs(doc_word_matrix, document_topic_dist, topic_word_dist)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix))
 
     topic_words = []
