@@ -6,7 +6,6 @@ from multiprocessing import Pool
 import scipy.sparse as sp
 import numpy as np
 from tqdm import tqdm
-from sklearn.feature_extraction.text import CountVectorizer
 
 from preprocess.preprocessing import preprocessing
 
@@ -86,7 +85,7 @@ if __name__ == '__main__':
     iterationNum = 50
     Z = []
     K = 10
-    with open("../preprocess/generated_files/doc_word_matrix", 'rb') as file:
+    with open("../preprocess/generated_files/doc_word_matrix.pickle", 'rb') as file:
         doc_word_matrix = pickle.load(file)
     doc_word_matrix = np.array(doc_word_matrix.to_dense(), dtype=int)
     N = doc_word_matrix.shape[0]
