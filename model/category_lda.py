@@ -134,10 +134,16 @@ def main(args):
     documents = [re.sub("[\[\]',]", "", doc).split() for doc in documents]
     category_list = [[cat] for cat in list(prepro_file_load("id2category").values())]
     category_corpora = prepro_file_load("category_corpora")
+
     doc_word_data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64)
                      for doc in documents]
     doc_category_data = [torch.tensor(list(filter(lambda a: a != -1, category_corpora.doc2idx(cat))), dtype=torch.int64)
                          for cat in category_list]
+
+    data_slice = None
+    if data_slice is not None:
+        doc_word_data = doc_word_data[:data_slice]
+        doc_category_data = doc_category_data[:data_slice]
 
     # Setting the new args
     args.num_words_per_doc = list(map(len, doc_word_data))
@@ -187,6 +193,7 @@ def main(args):
                      "_topics-" + str(args.num_topics) + \
                      "_batch-" + str(args.batch_size) + \
                      "_lr-" + str(args.learning_rate) + \
+                     "_data-size-" + str(data_slice) + \
                      ".png"
     plt.savefig(plot_file_name)
     plt.show()
