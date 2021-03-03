@@ -44,9 +44,9 @@ def sampling(topic_count, doc_vocab):
                 # Find the topic for the given word and decrease the counts by 1
                 topic = gZ[d_index][w_index].value
                 with gDT[d_index][topic].get_lock():
-                    gDT[d_index][topic] -= 1
+                    gDT[d_index][topic].value -= 1
                 with gTW[w_index][topic].get_lock():
-                    gTW[w_index][topic] -= 1
+                    gTW[w_index][topic].value -= 1
                 topic_count[topic] -= 1
 
                 # Sample a new topic and assign it to the topic assignment matrix
@@ -57,9 +57,9 @@ def sampling(topic_count, doc_vocab):
 
                 # Increase the counts by 1
                 with gDT[d_index][topic].get_lock():
-                    gDT[d_index][topic] += 1
+                    gDT[d_index][topic].value += 1
                 with gTW[w_index][topic].get_lock():
-                    gTW[w_index][topic] += 1
+                    gTW[w_index][topic].value += 1
                 topic_count[topic] += 1
     return topic_count
 
@@ -132,11 +132,12 @@ if __name__ == '__main__':
     gZ = [[Value('i', i) for i in d] for d in Z]
     gDT = [[Value('i', int(doc_topic[d, k])) for k in range(K)] for d in range(D)]
     gTW = [[Value('i', int(topic_word[k, w])) for w in range(W)] for k in range(K)]
-    topic_count = [sum(x) for x in gTW]
+    topic_count = [int(sum(x)) for x in topic_word]
 
     vocab_ranges = [x for x in range(0, W, int(W / num_thread))]
     if len(vocab_ranges) != num_thread+1:
         vocab_ranges.append(W - 1)
+
     for x in tqdm(range(num_thread)):
         vocab_thread_assignment = [(vocab_ranges[(index + x) % num_thread],
                                     vocab_ranges[((index + x) % num_thread) + 1])
