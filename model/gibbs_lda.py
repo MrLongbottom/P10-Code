@@ -6,18 +6,7 @@ import multiprocessing
 import numpy as np
 from tqdm import tqdm
 
-num_thread = 8
-
-gZ = None
-gDT = None
-gTW = None
-
-
-def init_globals(gz, gdt, gtw):
-    global gZ, gDT, gTW
-    gZ = gz
-    gDT = gdt
-    gTW = gtw
+num_thread = 4
 
 
 def gibbs(documents):
@@ -29,39 +18,46 @@ def gibbs(documents):
                                     vocab_ranges[((index + x) % num_thread) + 1])
                                    for index in range(num_thread)]
         doc_vocab_pairs = zip(documents, vocab_thread_assignment)
+        print('starting pool')
         with Pool(processes=num_thread) as p:
-            result = p.map(partial(sampling, topic_count), doc_vocab_pairs)
-            print()
+            r = p.map(partial(sampling, Z, [D, W, K, alpha, beta]), doc_vocab_pairs)
+            print(r)
         print()
 
 
-def sampling(topic_count, doc_vocab):
-    global gZ, gDT, gTW
+def sampling(Z, consts, doc_vocab):
+    D, W, K, alpha, beta = consts
     documents, vocab_range = doc_vocab
+
+    # Make counts
+    document_topic_dist = np.zeros([D, K]) + alpha
+    topic_word_dist = np.zeros([K, W]) + beta
+    nz = np.zeros([K])
+    for i, d in enumerate(Z):
+        for j, z in enumerate(d):
+            document_topic_dist[i, z] += 1
+            topic_word_dist[z, j] += 1
+            nz[z] += 1
+
     for d_index, doc in documents:
         for w_index, word in enumerate(doc):
             if vocab_range[0] < word < vocab_range[1]:
-                # Find the topic for the given word and decrease the counts by 1
-                topic = gZ[d_index][w_index].value
-                with gDT[d_index][topic].get_lock():
-                    gDT[d_index][topic].value -= 1
-                with gTW[w_index][topic].get_lock():
-                    gTW[w_index][topic].value -= 1
-                topic_count[topic] -= 1
+                # Forget current
+                topic = Z[d_index][w_index]
+                document_topic_dist[d_index, topic] -= 1
+                topic_word_dist[topic, w_index] -= 1
+                nz[topic] -= 1
 
                 # Sample a new topic and assign it to the topic assignment matrix
-                pz = np.divide(np.multiply(gDT[d_index, :], gTW[:, word]), nz)
+                pz = np.divide(np.multiply(document_topic_dist[d_index, :], topic_word_dist[:, word]), nz)
                 topic = np.random.multinomial(1, pz / pz.sum()).argmax()
-                with gZ[d_index][w_index].getlock():
-                    gZ[d_index][w_index] = topic
+                Z[d_index][w_index] = topic
 
                 # Increase the counts by 1
-                with gDT[d_index][topic].get_lock():
-                    gDT[d_index][topic].value += 1
-                with gTW[w_index][topic].get_lock():
-                    gTW[w_index][topic].value += 1
-                topic_count[topic] += 1
-    return topic_count
+                document_topic_dist[d_index, topic] += 1
+                topic_word_dist[topic, w_index] += 1
+                nz[topic] += 1
+    return Z, document_topic_dist, topic_word_dist, nz
 
 
 def increase(topic, doc_topic, topic_word, word, d_index):
@@ -128,30 +124,8 @@ if __name__ == '__main__':
     nz = np.zeros([K]) + W * beta
 
     Z, doc_topic, topic_word = random_initialize(doc_word_matrix, document_topic_dist, topic_word_dist)
-
-    gZ = [[Value('i', i) for i in d] for d in Z]
-    gDT = [[Value('i', int(doc_topic[d, k])) for k in range(K)] for d in range(D)]
-    gTW = [[Value('i', int(topic_word[k, w])) for w in range(W)] for k in range(K)]
     topic_count = [int(sum(x)) for x in topic_word]
 
-    vocab_ranges = [x for x in range(0, W, int(W / num_thread))]
-    if len(vocab_ranges) != num_thread+1:
-        vocab_ranges.append(W - 1)
-
-    for x in tqdm(range(num_thread)):
-        vocab_thread_assignment = [(vocab_ranges[(index + x) % num_thread],
-                                    vocab_ranges[((index + x) % num_thread) + 1])
-                                   for index in range(num_thread)]
-        doc_vocab_pairs = zip(doc_sets, vocab_thread_assignment)
-        print('starting pool')
-        with Pool(processes=num_thread, initializer=init_globals, initargs=[gZ, gDT, gTW]) as p:
-            r = p.map_async(partial(sampling, topic_count), doc_vocab_pairs, chunksize=1)
-            r.wait()
-            r1 = r.get()
-            print(r1)
-
-    '''
     for i in tqdm(range(0, iterationNum)):
-        gibbs(sets)
+        gibbs(doc_sets)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix))
-    '''
