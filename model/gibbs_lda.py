@@ -5,6 +5,7 @@ from multiprocessing import Pool, Value
 import multiprocessing
 import numpy as np
 from tqdm import tqdm
+import collections
 
 num_thread = 4
 
@@ -21,7 +22,17 @@ def gibbs(documents):
         print('starting pool')
         with Pool(processes=num_thread) as p:
             r = p.map(partial(sampling, Z, [D, W, K, alpha, beta]), doc_vocab_pairs)
-            print(r)
+            print([len(x) for x in r])
+            keys = [k for d in r for k in d.keys()]
+            overlap = [item for item, count in collections.Counter(keys).items() if count > 1]
+            if len(overlap) > 0:
+                raise Exception('We have thread overlap!')
+            combined = {k: v for d in r for k, v in d.items()}
+            # update / synchronize Z
+            for k, v in combined.items():
+                Z[k[0]][k[1]] = v
+            print('test')
+
         print()
 
 
@@ -47,7 +58,6 @@ def sampling(Z, consts, doc_vocab):
                 document_topic_dist[d_index, topic] -= 1
                 topic_word_dist[topic, w_index] -= 1
                 nz[topic] -= 1
-                z_change[(d_index, w_index)] = z_change.get((d_index, w_index), 0) - 1
 
                 # Sample a new topic and assign it to the topic assignment matrix
                 pz = np.divide(np.multiply(document_topic_dist[d_index, :], topic_word_dist[:, word]), nz)
@@ -58,7 +68,7 @@ def sampling(Z, consts, doc_vocab):
                 document_topic_dist[d_index, topic] += 1
                 topic_word_dist[topic, w_index] += 1
                 nz[topic] += 1
-                z_change[(d_index, w_index)] = z_change.get((d_index, w_index), 0) - 1
+                z_change[(d_index, w_index)] = topic
     return z_change
 
 
