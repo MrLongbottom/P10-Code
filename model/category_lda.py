@@ -1,6 +1,7 @@
 import argparse
 import logging
 import functools
+import re
 
 import torch
 from torch.distributions import constraints
@@ -15,7 +16,7 @@ from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
 
-from preprocess.preprocessing import preprocessing
+from preprocess.preprocessing import preprocessing, prepro_file_load
 
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
@@ -128,11 +129,15 @@ def main(args):
     gen_category_data = data["category_data"]
 
     # Loading data
-    corpora, documents, d2b, dwm, category_corpora, category_list = preprocessing()
+    corpora = prepro_file_load("corpora")
+    documents = list(prepro_file_load("id2pre_text").values())
+    documents = [re.sub("[\[\]',]", "", doc).split() for doc in documents]
+    category_list = [[cat] for cat in list(prepro_file_load("id2category").values())]
+    category_corpora = prepro_file_load("category_corpora")
     doc_word_data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64)
                      for doc in documents]
-    category_data = [torch.tensor(list(filter(lambda a: a != -1, category_corpora.doc2idx(cat))), dtype=torch.int64)
-                     for cat in category_list]
+    doc_category_data = [torch.tensor(list(filter(lambda a: a != -1, category_corpora.doc2idx(cat))), dtype=torch.int64)
+                         for cat in category_list]
 
     # Setting the new args
     args.num_words_per_doc = list(map(len, doc_word_data))
@@ -157,11 +162,12 @@ def main(args):
     # Training for num_steps iterations
     logging.info('Step\tLoss')
     for step in tqdm(range(args.num_steps)):
-        loss = svi.step(doc_word_data=doc_word_data, category_data=category_data, args=args, batch_size=args.batch_size)
+        loss = svi.step(doc_word_data=doc_word_data, category_data=doc_category_data, args=args,
+                        batch_size=args.batch_size)
         losses.append(loss)
         if step % 10 == 0:
             logging.info('{: >5d}\t{}'.format(step, loss))
-    loss = elbo.loss(model, parametrized_guide, doc_word_data=doc_word_data, category_data=category_data, args=args,
+    loss = elbo.loss(model, parametrized_guide, doc_word_data=doc_word_data, category_data=doc_category_data, args=args,
                      batch_size=args.batch_size)
     logging.info('final loss = {}'.format(loss))
 

@@ -40,12 +40,12 @@ def preprocessing(printouts=False, save=True):
     documents = [list(gensim.utils.tokenize(x, lowercase=True, deacc=True, encoding='utf-8')) for x in
                  tqdm(texts.values())]
     category_list = list([x] for x in categories.values())
-    category_corpora = gensim.corpora.Dictionary(category_list)
 
     # Build Corpora object
     if printouts:
         print("Building Corpora")
     corpora = gensim.corpora.Dictionary(documents)
+    category_corpora = gensim.corpora.Dictionary(category_list)
 
     # Extreme filter
     if printouts:
@@ -73,6 +73,7 @@ def preprocessing(printouts=False, save=True):
         if printouts:
             print("Saving Corpora & Preprocessed Text")
         corpora.save('../' + paths['corpora'])
+        category_corpora.save('../' + paths['category_corpora'])
         with open('../' + paths['doc2bow'], "wb") as file:
             pickle.dump(doc2bow, file)
         with open('../' + paths['doc_word_matrix'], "wb") as file:
@@ -83,7 +84,7 @@ def preprocessing(printouts=False, save=True):
 
     if printouts:
         print('Preprocessing Finished.')
-    return corpora, documents, doc2bow, doc_word_matrix, category_corpora, category_list
+    return corpora, documents, doc2bow, doc_word_matrix, category_list, category_corpora
 
 
 def sparse_vector_document_representations(corpora, doc2bow):
