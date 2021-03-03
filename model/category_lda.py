@@ -140,6 +140,7 @@ def main(args):
     doc_category_data = [torch.tensor(list(filter(lambda a: a != -1, category_corpora.doc2idx(cat))), dtype=torch.int64)
                          for cat in category_list]
 
+    # Slice data to only use data from the first n documents
     data_slice = None
     if data_slice is not None:
         doc_word_data = doc_word_data[:data_slice]
