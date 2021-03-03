@@ -139,6 +139,7 @@ def main(args):
                      for doc in documents]
     doc_category_data = [torch.tensor(list(filter(lambda a: a != -1, category_corpora.doc2idx(cat))), dtype=torch.int64)
                          for cat in category_list]
+    # TODO check if there are differences in this date and model generated data
 
     # Slice data to only use data from the first n documents
     data_slice = None
