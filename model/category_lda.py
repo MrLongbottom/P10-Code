@@ -139,7 +139,7 @@ def main(args):
     args.num_words = len(corpora)
     args.num_docs = len(doc_word_data)
     args.num_categories = len(category_corpora)
-    args.num_topics = args.num_categories * 2
+    args.num_topics = args.num_categories * 2  # TODO test different amounts of topics
 
     # We'll train using SVI.
     logging.info('-' * 40)
@@ -177,7 +177,12 @@ def main(args):
     plt.title("ELBO")
     plt.xlabel("step")
     plt.ylabel("loss")
-    plt.savefig("../loss-2017.png")
+    plot_file_name = "../loss-2017_categories-" + str(args.num_categories) + \
+                     "_topics-" + str(args.num_topics) + \
+                     "_batch-" + str(args.batch_size) + \
+                     "_lr-" + str(args.learning_rate) + \
+                     ".png"
+    plt.savefig(plot_file_name)
     plt.show()
 
     # save model
@@ -200,10 +205,10 @@ if __name__ == '__main__':
     parser.add_argument("-w", "--num-words", default=1024, type=int)
     parser.add_argument("-wd", "--num-words-per-doc", default=np.random.randint(low=5, high=1000, size=1000))
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
-    parser.add_argument("-n", "--num-steps", default=1000, type=int)
+    parser.add_argument("-n", "--num-steps", default=500, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
     parser.add_argument("-lr", "--learning-rate", default=0.01, type=float)
-    parser.add_argument("-b", "--batch-size", default=32, type=int)
+    parser.add_argument("-b", "--batch-size", default=32, type=int)  # TODO try different batch sizes
     parser.add_argument('--jit', action='store_true')
     args = parser.parse_args()
     main(args)
