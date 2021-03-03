@@ -2,6 +2,9 @@ import gensim
 from tqdm import tqdm
 import json
 import utility
+import itertools
+import torch.sparse
+import pickle
 
 
 def preprocessing(printouts=False, save=True):
@@ -16,13 +19,15 @@ def preprocessing(printouts=False, save=True):
     rev = {v: k for k, v in texts.items()}
     new_texts = {v: k for k, v in rev.items()}
     bad_ids = [x for x in texts.keys() if x not in new_texts.keys()]
-    categories = {k: v for k, v in categories.items() if k not in bad_ids}
-    authors = {k: v for k, v in authors.items() if k not in bad_ids}
-    taxonomies = {k: v for k, v in taxonomies.items() if k not in bad_ids}
-    texts = new_texts
+    id2doc_file = {num_id: name_id for num_id, name_id in enumerate(new_texts.keys())}
+    categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
+    authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
+    taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
+    texts = {e: v.replace('\n', '') for e, (k, v) in enumerate(texts.items()) if k not in bad_ids}
     if save:
         if printouts:
             print("Saving data mapping files")
+        utility.save_dict_file('../' + paths['id2doc_name'], id2doc_file)
         utility.save_dict_file('../' + paths['id2raw_text'], texts)
         utility.save_dict_file('../' + paths['id2category'], categories)
         utility.save_dict_file('../' + paths['id2author'], authors)
@@ -44,17 +49,49 @@ def preprocessing(printouts=False, save=True):
         print("Filtering out extreme words")
     corpora.filter_extremes(no_below=10, no_above=0.1)
 
-    # clean and save corpora
+    # clean up and construct & save files
     corpora.compactify()
+
+    doc2id = []
+    doc2 = []
+    for doc in documents:
+        doc_id = corpora.doc2idx(doc)
+        doc2.append([doc[i] for i in range(len(doc)) if doc_id[i] != -1])
+        doc2id.append([x for x in doc_id if x != -1])
+    documents = doc2
+
+    doc2bow = []
+    for doc in documents:
+        doc2bow.append(corpora.doc2bow(doc))
+
+    doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
+
     if save:
         if printouts:
             print("Saving Corpora & Preprocessed Text")
         corpora.save('../' + paths['corpora'])
-        # TODO save down id2word_id mapping and id2words mapping
+        with open('../' + paths['doc2bow'], "wb") as file:
+            pickle.dump(doc2bow, file)
+        with open('../' + paths['doc_word_matrix'], "wb") as file:
+            pickle.dump(doc_word_matrix, file)
+        utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
+        utility.save_dict_file('../' + paths['id2pre_text'], documents)
+        utility.save_dict_file('../' + paths['doc2word_ids'], doc2id)
 
     if printouts:
         print('Preprocessing Finished.')
-    return corpora, documents
+    return corpora, documents, doc2bow, doc_word_matrix
+
+
+def sparse_vector_document_representations(corpora, doc2bow):
+    doc_keys = list(itertools.chain.from_iterable
+                    ([[[doc_id, word_id[0]] for word_id in doc2bow[doc_id]] for doc_id in range(len(doc2bow))]))
+    doc_values = []
+    for doc in tqdm(doc2bow):
+        [doc_values.append(y) for x, y in doc]
+    sparse_docs = torch.sparse.FloatTensor(torch.LongTensor(doc_keys).t(), torch.FloatTensor(doc_values),
+                                          torch.Size([corpora.num_docs, len(corpora)]))
+    return sparse_docs
 
 
 def load_document_file(filename):
@@ -63,7 +100,7 @@ def load_document_file(filename):
     categories = {}
     authors = {}
     taxonomies = {}
-    with open(filename, "r") as json_file:
+    with open(filename, "r", encoding='utf-8', errors='ignore') as json_file:
         for json_obj in json_file:
             try:
                 data = json.loads(json_obj)
@@ -80,5 +117,21 @@ def load_document_file(filename):
     return documents, categories, authors, taxonomies
 
 
+def prepro_file_load(file_name):
+    paths = utility.load_dict_file("../paths.csv")
+    if file_name not in paths:
+        raise Exception('File name not in paths file')
+    else:
+        file_path = '../' + paths[file_name]
+        if file_path[-4:] == '.csv':
+            return utility.load_dict_file(file_path)
+        elif file_path[-7:] == '.pickle':
+            with open(file_path, 'rb') as file:
+                return pickle.load(file)
+        else:
+            return gensim.corpora.Dictionary.load(file_path)
+
+
 if __name__ == '__main__':
-    preprocessing(printouts=True, save=True)
+    info = preprocessing(printouts=True, save=True)
+    print('Finished Preprocessing')

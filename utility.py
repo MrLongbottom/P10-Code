@@ -1,4 +1,4 @@
-def load_dict_file(filepath, separator=','):
+def load_dict_file(filepath, separator='@'):
     """
     Loads the content of a file as a dictionary
     :param filepath: path of file to be loaded. Should include folders and file type.
@@ -15,26 +15,7 @@ def load_dict_file(filepath, separator=','):
     return dictionary
 
 
-def save_dict_file(filepath, content, separator=','):
-    """
-    Saves content of list as a vector in a file, similar to a Word2Vec document.
-    :param separator: separator between values
-    :param filepath: path of file to save.
-    :param content: list of content to save.
-    :return: None
-    """
-    print('Saving file "' + filepath + '".')
-    with open(filepath, "w", encoding='utf-8') as file:
-        if isinstance(content, dict):
-            for k, v in content.items():
-                file.write(str(k) + separator + str(v) + '\n')
-        else:
-            for i, c in enumerate(content):
-                file.write(str(i) + separator + str(c) + '\n')
-    print('"' + filepath + '" has been saved.')
-
-
-def load_pair_file(filepath, separator=','):
+def load_pair_file(filepath, separator='@'):
     with open(filepath, 'r', encoding='utf-8') as file:
         listen = []
         for line in file.readlines():
@@ -46,9 +27,20 @@ def load_pair_file(filepath, separator=','):
     return listen
 
 
-def save_vector_file_nonunique(filepath, content, separator=','):
+def save_dict_file(filepath, content, separator='@'):
+    """
+    Saves content of list as a vector in a file, similar to a Word2Vec document.
+    :param separator: separator between values
+    :param filepath: path of file to save.
+    :param content: dict or iterator of content to save.
+    :return: None
+    """
     print('Saving file "' + filepath + '".')
     with open(filepath, "w", encoding='utf-8') as file:
-        for i, c in content:
-            file.write(str(i) + separator + str(c) + '\n')
+        if isinstance(content, dict):
+            for k, v in content.items():
+                file.write(str(k) + separator + str(v) + '\n')
+        else:
+            for i, c in enumerate(content):
+                file.write(str(i) + separator + str(c) + '\n')
     print('"' + filepath + '" has been saved.')
