@@ -19,9 +19,10 @@ def gibbs(documents):
                                     vocab_ranges[((index + x) % num_thread) + 1])
                                    for index in range(num_thread)]
         doc_vocab_pairs = zip(documents, vocab_thread_assignment)
+        counts = compute_counts(Z, [D, W, K, alpha, beta])
         with Pool(processes=num_thread) as p:
-            r = p.map(partial(sampling, Z, [D, W, K, alpha, beta]), doc_vocab_pairs)
-            print([len(x) for x in r])
+            r = p.map(partial(sampling, Z, counts), doc_vocab_pairs)
+            print(str(sum([len(x) for x in r])) + ' total changes')
             keys = [k for d in r for k in d.keys()]
             overlap = [item for item, count in collections.Counter(keys).items() if count > 1]
             if len(overlap) > 0:
@@ -45,11 +46,10 @@ def compute_counts(Z, consts):
     return document_topic_dist, topic_word_dist, topic_counts
 
 
-def sampling(Z, consts, doc_vocab):
+def sampling(Z, counts, doc_vocab):
     documents, vocab_range = doc_vocab
+    document_topic_dist, topic_word_dist, topic_counts = counts
     z_change = {}
-    # Make counts
-    document_topic_dist, topic_word_dist, topic_counts = compute_counts(Z, consts)
 
     for d_index, doc in documents:
         for w_index, word in enumerate(doc):
