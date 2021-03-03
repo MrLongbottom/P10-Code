@@ -1,6 +1,7 @@
 import argparse
 import functools
 import logging
+import re
 
 import pyro
 import pyro.distributions as dist
@@ -11,7 +12,9 @@ from torch import nn
 from torch.distributions import constraints
 from tqdm import tqdm
 
-from preprocess.preprocessing import preprocessing
+import matplotlib.pyplot as plt
+
+from preprocess.preprocessing import preprocessing, prepro_file_load
 
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
@@ -91,7 +94,9 @@ def main(args):
     pyro.enable_validation(__debug__)
 
     # Loading data
-    corpora, documents = preprocessing()
+    corpora = prepro_file_load("corpora")
+    documents = list(prepro_file_load("id2pre_text").values())
+    documents = [re.sub("[\[\]',]", "", doc).split() for doc in documents]
     data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64) for doc in documents]
     N = list(map(len, data))
     args.num_words = len(corpora)
@@ -106,14 +111,27 @@ def main(args):
     optim = ClippedAdam({'lr': args.learning_rate})
     svi = SVI(model, guide, optim, elbo)
 
+    losses = []
+
     logging.info('Step\tLoss')
     for step in tqdm(range(args.num_steps)):
         loss = svi.step(data, N, args=args)
+        losses.append(loss)
         if step % 10 == 0:
             # logging.info('{: >5d}\t{}'.format(step, loss))
             logging.info(f"Loss: {loss}")
     loss = elbo.loss(model, guide, data, N, args=args)
     logging.info('final loss = {}'.format(loss))
+
+    # Plot loss over iterations
+    plt.plot(losses)
+    plt.title("ELBO")
+    plt.xlabel("step")
+    plt.ylabel("loss")
+    plot_file_name = "../loss-2017_variable-sizes_only-word-data.png"
+    plt.savefig(plot_file_name)
+    plt.show()
+
     # save model
     torch.save({"model": predictor.state_dict(), "guide": guide}, "../mymodel.pt")
     pyro.get_param_store().save("mymodelparams.pt")
