@@ -1,12 +1,17 @@
-2017_data,C:\Users\petme\Downloads\Finished Data 2017
-2018_data,C:\Users\petme\Downloads\Finished Data 2018
-2019_data,C:\Users\petme\Downloads\Finished Data 2018
-2017_json,data/2017_data.json
-2018_json,data/2018_data.json
-2019_json,data/2019_data.json
-corpora,data/preprocess/corpora
-id2raw_text,data/preprocess/raw_texts.csv
-id2pre_text,data/preprocess/pre_texts.csv
-id2category,data/preprocess/categories.csv
-id2author,data/preprocess/authors.csv
-id2taxonomy,data/preprocess/taxonomies.csv
+2017_data@data/Finished Data 2017
+2018_data@data/Finished Data 2018
+2019_data@data/Finished Data 2018
+2017_json@data/2017_data.json
+2018_json@data/2018_data.json
+2019_json@data/2019_data.json
+corpora@preprocess/generated_files/corpora
+id2raw_text@preprocess/generated_files/raw_texts.csv
+id2pre_text@preprocess/generated_files/pre_texts.csv
+id2category@preprocess/generated_files/categories.csv
+id2author@preprocess/generated_files/authors.csv
+id2taxonomy@preprocess/generated_files/taxonomies.csv
+doc2bow@preprocess/generated_files/doc2bow.pickle
+doc_word_matrix@preprocess/generated_files/doc_word_matrix.pickle
+id2word@preprocess/generated_files/id2word.csv
+id2doc_name@preprocess/generated_files/id2doc.csv
+doc2word_ids@preprocess/generated_files/doc2word.csv
