@@ -7,7 +7,7 @@ import numpy as np
 from tqdm import tqdm
 import collections
 
-num_thread = 4
+num_thread = 8
 
 
 def gibbs(documents):
@@ -19,7 +19,6 @@ def gibbs(documents):
                                     vocab_ranges[((index + x) % num_thread) + 1])
                                    for index in range(num_thread)]
         doc_vocab_pairs = zip(documents, vocab_thread_assignment)
-        print('starting pool')
         with Pool(processes=num_thread) as p:
             r = p.map(partial(sampling, Z, [D, W, K, alpha, beta]), doc_vocab_pairs)
             print([len(x) for x in r])
@@ -31,24 +30,26 @@ def gibbs(documents):
             # update / synchronize Z
             for k, v in combined.items():
                 Z[k[0]][k[1]] = v
-            print('test')
-
-        print()
 
 
-def sampling(Z, consts, doc_vocab):
+def compute_counts(Z, consts):
     D, W, K, alpha, beta = consts
-    documents, vocab_range = doc_vocab
-    z_change = {}
-    # Make counts
     document_topic_dist = np.zeros([D, K]) + alpha
     topic_word_dist = np.zeros([K, W]) + beta
-    nz = np.zeros([K])
+    topic_counts = np.zeros([K])
     for i, d in enumerate(Z):
         for j, z in enumerate(d):
             document_topic_dist[i, z] += 1
             topic_word_dist[z, j] += 1
-            nz[z] += 1
+            topic_counts[z] += 1
+    return document_topic_dist, topic_word_dist, topic_counts
+
+
+def sampling(Z, consts, doc_vocab):
+    documents, vocab_range = doc_vocab
+    z_change = {}
+    # Make counts
+    document_topic_dist, topic_word_dist, topic_counts = compute_counts(Z, consts)
 
     for d_index, doc in documents:
         for w_index, word in enumerate(doc):
@@ -57,31 +58,19 @@ def sampling(Z, consts, doc_vocab):
                 topic = Z[d_index][w_index]
                 document_topic_dist[d_index, topic] -= 1
                 topic_word_dist[topic, w_index] -= 1
-                nz[topic] -= 1
+                topic_counts[topic] -= 1
 
                 # Sample a new topic and assign it to the topic assignment matrix
-                pz = np.divide(np.multiply(document_topic_dist[d_index, :], topic_word_dist[:, word]), nz)
+                pz = np.divide(np.multiply(document_topic_dist[d_index, :], topic_word_dist[:, word]), topic_counts)
                 topic = np.random.multinomial(1, pz / pz.sum()).argmax()
                 Z[d_index][w_index] = topic
 
                 # Increase the counts by 1
                 document_topic_dist[d_index, topic] += 1
                 topic_word_dist[topic, w_index] += 1
-                nz[topic] += 1
+                topic_counts[topic] += 1
                 z_change[(d_index, w_index)] = topic
     return z_change
-
-
-def increase(topic, doc_topic, topic_word, word, d_index):
-    doc_topic[d_index, topic] += 1
-    topic_word[topic, word] += 1
-    nz[topic] += 1
-
-
-def decrease(topic, doc_topic, topic_word, word, d_index):
-    doc_topic[d_index, topic] -= 1
-    topic_word[topic, word] -= 1
-    nz[topic] -= 1
 
 
 def random_initialize(documents, doc_topic, topic_word):
@@ -101,6 +90,7 @@ def random_initialize(documents, doc_topic, topic_word):
 
 
 def perplexity(data):
+    document_topic_dist, topic_word_dist, topic_counts = compute_counts(Z, [D,W,K,alpha,beta])
     nd = np.sum(document_topic_dist, 1)
     n = 0
     ll = 0.0
