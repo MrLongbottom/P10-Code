@@ -2,15 +2,28 @@ import pickle
 import time
 from functools import partial
 from multiprocessing import Pool, Value
-
+import multiprocessing
 import numpy as np
 from tqdm import tqdm
 
 num_thread = 8
 
+gZ = None
+gDT = None
+gTW = None
+
+
+def init_globals(gz, gdt, gtw):
+    global gZ, gDT, gTW
+    gZ = gz
+    gDT = gdt
+    gTW = gtw
+
 
 def gibbs(documents):
     vocab_ranges = [x for x in range(0, W, int(W / num_thread))]
+    if len(vocab_ranges) != num_thread+1:
+        vocab_ranges.append(W-1)
     for x in range(num_thread):
         vocab_thread_assignment = [(vocab_ranges[(index + x) % num_thread],
                                     vocab_ranges[((index + x) % num_thread) + 1])
@@ -23,28 +36,30 @@ def gibbs(documents):
 
 
 def sampling(topic_count, doc_vocab):
-    vocab_range, documents = doc_vocab
+    global gZ, gDT, gTW
+    documents, vocab_range = doc_vocab
     for d_index, doc in documents:
         for w_index, word in enumerate(doc):
             if vocab_range[0] < word < vocab_range[1]:
                 # Find the topic for the given word and decrease the counts by 1
-                topic = Z[d_index][w_index]
-                with doc_topic[d_index][topic].get_lock():
-                    doc_topic[d_index][topic] -= 1
-                with topic_word[w_index][topic].get_lock():
-                    topic_word[w_index][topic] -= 1
+                topic = gZ[d_index][w_index].value
+                with gDT[d_index][topic].get_lock():
+                    gDT[d_index][topic] -= 1
+                with gTW[w_index][topic].get_lock():
+                    gTW[w_index][topic] -= 1
                 topic_count[topic] -= 1
 
                 # Sample a new topic and assign it to the topic assignment matrix
-                pz = np.divide(np.multiply(doc_topic[d_index, :], topic_word[:, word]), nz)
+                pz = np.divide(np.multiply(gDT[d_index, :], gTW[:, word]), nz)
                 topic = np.random.multinomial(1, pz / pz.sum()).argmax()
-                Z[d_index][w_index] = topic
+                with gZ[d_index][w_index].getlock():
+                    gZ[d_index][w_index] = topic
 
                 # Increase the counts by 1
-                with doc_topic[d_index][topic].get_lock():
-                    doc_topic[d_index][topic] += 1
-                with topic_word[w_index][topic].get_lock():
-                    topic_word[w_index][topic] += 1
+                with gDT[d_index][topic].get_lock():
+                    gDT[d_index][topic] += 1
+                with gTW[w_index][topic].get_lock():
+                    gTW[w_index][topic] += 1
                 topic_count[topic] += 1
     return topic_count
 
@@ -93,13 +108,12 @@ def chunks(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
-
 if __name__ == '__main__':
     alpha = 0.1
     beta = 0.1
     iterationNum = 50
     K = 10
-    with open("../preprocess/generated_files/doc_word_matrix", 'rb') as file:
+    with open("../preprocess/generated_files/doc_word_matrix.pickle", 'rb') as file:
         doc_word_matrix = pickle.load(file)
     with open("../preprocess/generated_files/corpora", 'rb') as file:
         corpora = pickle.load(file)
@@ -107,7 +121,7 @@ if __name__ == '__main__':
     D = doc_word_matrix.shape[0]
     W = doc_word_matrix.shape[1]
     doc_word_matrix = [np.nonzero(x)[0] for x in doc_word_matrix]
-    sets = [list(x) for x in chunks(list(enumerate(doc_word_matrix)), int(len(doc_word_matrix) / num_thread))]
+    doc_sets = [list(x) for x in chunks(list(enumerate(doc_word_matrix)), int(len(doc_word_matrix) / num_thread))]
 
     document_topic_dist = np.zeros([D, K]) + alpha
     topic_word_dist = np.zeros([K, W]) + beta
@@ -115,21 +129,28 @@ if __name__ == '__main__':
 
     Z, doc_topic, topic_word = random_initialize(doc_word_matrix, document_topic_dist, topic_word_dist)
 
-    doc_topic_count = [[Value('i', int(doc_topic[d, k])) for k in range(K)] for d in range(D)]
-    topic_word_count = [[Value('i', int(topic_word[k, w])) for w in range(W)] for k in range(K)]
-    topic_count = [sum(x) for x in topic_word]
+    gZ = [[Value('i', i) for i in d] for d in Z]
+    gDT = [[Value('i', int(doc_topic[d, k])) for k in range(K)] for d in range(D)]
+    gTW = [[Value('i', int(topic_word[k, w])) for w in range(W)] for k in range(K)]
+    topic_count = [sum(x) for x in gTW]
 
+    vocab_ranges = [x for x in range(0, W, int(W / num_thread))]
+    if len(vocab_ranges) != num_thread+1:
+        vocab_ranges.append(W - 1)
+    for x in tqdm(range(num_thread)):
+        vocab_thread_assignment = [(vocab_ranges[(index + x) % num_thread],
+                                    vocab_ranges[((index + x) % num_thread) + 1])
+                                   for index in range(num_thread)]
+        doc_vocab_pairs = zip(doc_sets, vocab_thread_assignment)
+        print('starting pool')
+        with Pool(processes=num_thread, initializer=init_globals, initargs=[gZ, gDT, gTW]) as p:
+            r = p.map_async(partial(sampling, topic_count), doc_vocab_pairs, chunksize=1)
+            r.wait()
+            r1 = r.get()
+            print(r1)
+
+    '''
     for i in tqdm(range(0, iterationNum)):
         gibbs(sets)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix))
-
-    topic_words = []
-    id2token = {v: k for k, v in corpora.token2id.items()}
-    maxTopicWordsNum = 10
-    for z in range(0, K):
-        ids = topic_word_count[z, :].argsort()
-        topic_word = []
-        for j in ids:
-            topic_word.insert(0, id2token[j])
-        topic_words.append(topic_word[0: min(10, len(topic_word))])
-    print(topic_words)
+    '''
