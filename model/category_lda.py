@@ -128,7 +128,7 @@ def main(args):
     gen_category_data = data["category_data"]
 
     # Loading data
-    corpora, documents, category_corpora, category_list = preprocessing()
+    corpora, documents, d2b, dwm, category_corpora, category_list = preprocessing()
     doc_word_data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64)
                      for doc in documents]
     category_data = [torch.tensor(list(filter(lambda a: a != -1, category_corpora.doc2idx(cat))), dtype=torch.int64)
