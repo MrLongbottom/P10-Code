@@ -28,7 +28,7 @@ def gibbs(documents):
 def sampling(Z, consts, doc_vocab):
     D, W, K, alpha, beta = consts
     documents, vocab_range = doc_vocab
-
+    z_change = {}
     # Make counts
     document_topic_dist = np.zeros([D, K]) + alpha
     topic_word_dist = np.zeros([K, W]) + beta
@@ -47,6 +47,7 @@ def sampling(Z, consts, doc_vocab):
                 document_topic_dist[d_index, topic] -= 1
                 topic_word_dist[topic, w_index] -= 1
                 nz[topic] -= 1
+                z_change[(d_index, w_index)] = z_change.get((d_index, w_index), 0) - 1
 
                 # Sample a new topic and assign it to the topic assignment matrix
                 pz = np.divide(np.multiply(document_topic_dist[d_index, :], topic_word_dist[:, word]), nz)
@@ -57,7 +58,8 @@ def sampling(Z, consts, doc_vocab):
                 document_topic_dist[d_index, topic] += 1
                 topic_word_dist[topic, w_index] += 1
                 nz[topic] += 1
-    return Z, document_topic_dist, topic_word_dist, nz
+                z_change[(d_index, w_index)] = z_change.get((d_index, w_index), 0) - 1
+    return z_change
 
 
 def increase(topic, doc_topic, topic_word, word, d_index):
