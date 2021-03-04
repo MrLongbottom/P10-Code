@@ -62,7 +62,7 @@ def gibbs_sampling(documents: List[np.ndarray],
             word_topic_assignment[d_index][w_index] = topic
 
             # And increase the topic count
-            increase_count(topic, topic_word, cat_topic, d_index, word, topic_count)
+            increase_count(topic, topic_word, cat_topic, c_index, word, topic_count)
 
 
 def increase_count(topic, topic_word, doc_topic, d_index, word, t_count):
@@ -87,8 +87,9 @@ def perplexity(documents: List[np.ndarray]) -> float:
     n = 0
     ll = 0.0
     for d, doc in enumerate(documents):
+        cat = doc2category[d]
         for w in doc:
-            ll = ll + np.log(((topic_word_dist[:, w] / topic_count) * (category_topic_dist[d, :] / nd[d])).sum())
+            ll = ll + np.log(((topic_word_dist[:, w] / topic_count) * (category_topic_dist[cat, :] / nd[cat])).sum())
             n = n + 1
     return np.exp(ll / (-n))
 
