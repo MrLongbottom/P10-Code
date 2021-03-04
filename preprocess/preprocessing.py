@@ -20,18 +20,29 @@ def preprocessing(printouts=False, save=True):
     new_texts = {v: k for k, v in rev.items()}
     bad_ids = [x for x in texts.keys() if x not in new_texts.keys()]
     id2doc_file = {num_id: name_id for num_id, name_id in enumerate(new_texts.keys())}
+
     categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
+    cat2id = {v: i for v, i in zip(list(set(categories.values())), range(len(set(categories.values()))))}
+    categories = {i: cat2id[v] for v, i in zip(categories.values(), range(len(categories)))}
     authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
+    auth2id = {v: i for v, i in zip(list(set(authors.values())), range(len(set(authors.values()))))}
+    authors = {i: auth2id[v] for v, i in zip(authors.values(), range(len(authors)))}
     taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
+    tax2id = {v: i for v, i in zip(list(set(taxonomies.values())), range(len(set(taxonomies.values()))))}
+    taxonomies = {i: tax2id[v] for v, i in zip(taxonomies.values(), range(len(taxonomies)))}
+
     texts = {e: v.replace('\n', '') for e, (k, v) in enumerate(texts.items()) if k not in bad_ids}
     if save:
         if printouts:
             print("Saving data mapping files")
         utility.save_dict_file('../' + paths['id2doc_name'], id2doc_file)
         utility.save_dict_file('../' + paths['id2raw_text'], texts)
-        utility.save_dict_file('../' + paths['id2category'], categories)
-        utility.save_dict_file('../' + paths['id2author'], authors)
-        utility.save_dict_file('../' + paths['id2taxonomy'], taxonomies)
+        utility.save_dict_file('../' + paths['id2category'], {v: k for k, v in cat2id.items()})
+        utility.save_dict_file('../' + paths['id2author'], {v: k for k, v in auth2id.items()})
+        utility.save_dict_file('../' + paths['id2taxonomy'], {v: k for k, v in tax2id.items()})
+        utility.save_dict_file('../' + paths['doc2category'], categories)
+        utility.save_dict_file('../' + paths['doc2author'], authors)
+        utility.save_dict_file('../' + paths['doc2taxonomy'], taxonomies)
 
     # tokenize (document token generators)
     if printouts:
