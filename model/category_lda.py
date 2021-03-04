@@ -137,9 +137,9 @@ def main(args):
 
     doc_word_data = [torch.tensor(list(filter(lambda a: a != -1, corpora.doc2idx(doc))), dtype=torch.int64)
                      for doc in documents]
-    doc_category_data = [torch.tensor(list(filter(lambda a: a != -1, category_corpora.doc2idx(cat))), dtype=torch.int64)
+    doc_category_data = [torch.tensor(next(filter(lambda a: a != -1, category_corpora.doc2idx(cat))), dtype=torch.int64)
                          for cat in category_list]
-    # TODO check if there are differences in this date and model generated data
+    # TODO X check if there are differences in this date and model generated data
 
     # Slice data to only use data from the first n documents
     data_slice = None
@@ -152,14 +152,14 @@ def main(args):
     args.num_words = len(corpora)
     args.num_docs = len(doc_word_data)
     args.num_categories = len(category_corpora)
-    args.num_topics = args.num_categories * 2  # TODO test different amounts of topics
+    args.num_topics = args.num_categories * 2  # TODO X test different amounts of topics
 
     # We'll train using SVI.
     logging.info('-' * 40)
     logging.info('Training on {} documents'.format(args.num_docs))
     Elbo = JitTraceEnum_ELBO if args.jit else TraceEnum_ELBO  # TODO test TraceEnum_ vs Trace_
     elbo = Elbo(max_plate_nesting=2)  # TODO Changing the max plate nesting value might be worth looking at
-    optim = ClippedAdam({'lr': args.learning_rate})  # TODO try different learning rates
+    optim = ClippedAdam({'lr': args.learning_rate})  # TODO X try different learning rates
     svi = SVI(model, parametrized_guide, optim, elbo)
 
     # If generating data from the model, turn category list to tensor
@@ -218,7 +218,7 @@ if __name__ == '__main__':
     parser.add_argument("-c", "--num-categories", default=32, type=int)
     parser.add_argument("-t", "--num-topics", default=64, type=int)
     parser.add_argument("-w", "--num-words", default=1024, type=int)
-    parser.add_argument("-wd", "--num-words-per-doc", default=np.random.randint(low=5, high=1000, size=1000))
+    parser.add_argument("-wd", "--num-words-per-doc", default=np.random.randint(low=5, high=300, size=1000))
     parser.add_argument("-d", "--num-docs", default=1000, type=int)
     parser.add_argument("-n", "--num-steps", default=500, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
