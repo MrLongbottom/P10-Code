@@ -23,7 +23,6 @@ def random_initialize(documents):
     for d, doc in tqdm(list(enumerate(documents))):
         curr_doc = []
         cat = doc2category[d]
-        print()
         for w in doc:
             pz = np.divide(np.multiply(category_topic[cat, :], topic_word[:, w]), topic_c)
             z = np.random.multinomial(1, pz / pz.sum()).argmax()
