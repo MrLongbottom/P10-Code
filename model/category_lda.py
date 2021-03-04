@@ -9,9 +9,8 @@ from torch.distributions import constraints
 import pyro
 import pyro.distributions as dist
 import pyro.poutine as poutine
-from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO, Trace_ELBO
+from pyro.infer import SVI, JitTraceEnum_ELBO, TraceEnum_ELBO, Trace_ELBO, TraceMeanField_ELBO
 from pyro.optim import ClippedAdam
-
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
@@ -68,7 +67,7 @@ def model(doc_word_data=None, category_data=None, args=None, batch_size=None):
                "doc_word_data": doc_word_list,
                "category_weights": category_weights,
                "category_topics": category_topics,
-               "category_data": doc_category_list}
+               "doc_category_data": doc_category_list}
 
     return results
 
@@ -126,7 +125,7 @@ def main(args):
     data = model(args=args)
 
     gen_doc_word_data = data["doc_word_data"]
-    gen_category_data = data["category_data"]
+    gen_doc_category_data = data["doc_category_data"]
 
     # Loading data
     corpora = prepro_file_load("corpora")
@@ -156,13 +155,11 @@ def main(args):
     # We'll train using SVI.
     logging.info('-' * 40)
     logging.info('Training on {} documents'.format(args.num_docs))
-    Elbo = JitTraceEnum_ELBO if args.jit else TraceEnum_ELBO  # TODO test TraceEnum_ vs Trace_
+    Elbo = JitTraceEnum_ELBO if args.jit else Trace_ELBO  # TODO test TraceEnum_ vs Trace_ vs TraceMeanField_
     elbo = Elbo(max_plate_nesting=2)  # TODO Changing the max plate nesting value might be worth looking at
     optim = ClippedAdam({'lr': args.learning_rate})  # TODO X try different learning rates
+    # TODO try something other than ClippedAdam or changing its parameters
     svi = SVI(model, parametrized_guide, optim, elbo)
-
-    # If generating data from the model, turn category list to tensor
-    # gen_category_data = torch.Tensor(gen_category_data)
 
     losses = []
 
@@ -222,7 +219,7 @@ if __name__ == '__main__':
     parser.add_argument("-n", "--num-steps", default=500, type=int)
     parser.add_argument("-l", "--layer-sizes", default="100-100")
     parser.add_argument("-lr", "--learning-rate", default=0.01, type=float)
-    parser.add_argument("-b", "--batch-size", default=32, type=int)  # TODO try different batch sizes
+    parser.add_argument("-b", "--batch-size", default=32, type=int)  # TODO X try different batch sizes
     parser.add_argument('--jit', action='store_true')
     args = parser.parse_args()
     main(args)
