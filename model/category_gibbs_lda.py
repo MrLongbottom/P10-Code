@@ -18,26 +18,30 @@ def random_initialize(documents):
     print("Random Initilization")
     category_topic = np.zeros([num_categories, num_topics]) + alpha
     topic_word = np.zeros([num_topics, M]) + beta
-    topic_c = np.zeros([num_topics]) + M * beta
+    topic_c_alpha = np.zeros([num_topics]) + num_topics*alpha
+    topic_c_beta = np.zeros([num_topics]) + M*beta
     wt_assignment = []
     for d, doc in tqdm(list(enumerate(documents))):
         curr_doc = []
         cat = doc2category[d]
         for w in doc:
-            pz = np.divide(np.multiply(category_topic[cat, :], topic_word[:, w]), topic_c)
+            pz = np.multiply(np.divide(category_topic[cat, :], topic_c_alpha),
+                             np.divide(topic_word[:, w], topic_c_beta))
             z = np.random.multinomial(1, pz / pz.sum()).argmax()
             curr_doc.append(z)
             category_topic[cat, z] += 1
             topic_word[z, w] += 1
-            topic_c[z] += 1
+            topic_c_alpha[z] += 1
+            topic_c_beta[z] += 1
         wt_assignment.append(curr_doc)
-    return wt_assignment, category_topic, topic_word, topic_c
+    return wt_assignment, category_topic, topic_word, topic_c_alpha, topic_c_beta
 
 
 def gibbs_sampling(documents: List[np.ndarray],
                    cat_topic: np.ndarray,
                    topic_word: np.ndarray,
-                   topic_count: np.ndarray,
+                   topic_count_alpha: np.ndarray,
+                   topic_count_beta: np.ndarray,
                    word_topic_assignment: List[List[int]]):
     """
     Takes a set of documents and samples a new topic for each word within each document.
@@ -52,29 +56,31 @@ def gibbs_sampling(documents: List[np.ndarray],
             # Find the topic for the given word a decrease the topic count
             topic = word_topic_assignment[d_index][w_index]
             c_index = doc2category[d_index]
-            decrease_count(topic, topic_word, cat_topic, c_index, word, topic_count)
+            decrease_count(topic, topic_word, cat_topic, c_index, word, topic_count_alpha, topic_count_beta)
 
             # Sample a new topic based on doc_topic and topic word
             # and assign it to the word we are working with
-            #np.multiply(np.divide(cat_topic[c_index,:], topic_count)
-            pz = np.divide(np.multiply(cat_topic[c_index, :], topic_word[:, word]), topic_count)
+            pz = np.multiply(np.divide(cat_topic[c_index, :], topic_count_alpha),
+                             np.divide(topic_word[:, word], topic_count_beta))
             topic = np.random.multinomial(1, pz / pz.sum()).argmax()
             word_topic_assignment[d_index][w_index] = topic
 
             # And increase the topic count
-            increase_count(topic, topic_word, cat_topic, c_index, word, topic_count)
+            increase_count(topic, topic_word, cat_topic, c_index, word, topic_count_alpha, topic_count_beta)
 
 
-def increase_count(topic, topic_word, doc_topic, d_index, word, t_count):
+def increase_count(topic, topic_word, doc_topic, d_index, word, t_count_a, t_count_b):
     doc_topic[d_index, topic] += 1
     topic_word[topic, word] += 1
-    t_count[topic] += 1
+    t_count_a[topic] += 1
+    t_count_b[topic] += 1
 
 
-def decrease_count(topic, topic_word, doc_topic, d_index, word, t_count):
+def decrease_count(topic, topic_word, doc_topic, d_index, word, t_count_a, t_count_b):
     doc_topic[d_index, topic] -= 1
     topic_word[topic, word] -= 1
-    t_count[topic] -= 1
+    t_count_a[topic] -= 1
+    t_count_b[topic] -= 1
 
 
 def perplexity(documents: List[np.ndarray]) -> float:
@@ -89,7 +95,7 @@ def perplexity(documents: List[np.ndarray]) -> float:
     for d, doc in enumerate(documents):
         cat = doc2category[d]
         for w in doc:
-            ll = ll + np.log(((topic_word_dist[:, w] / topic_count) * (category_topic_dist[cat, :] / nd[cat])).sum())
+            ll = ll + np.log(((topic_word_dist[:, w] / topic_count_beta) * (category_topic_dist[cat, :] / nd[cat])).sum())
             n = n + 1
     return np.exp(ll / (-n))
 
@@ -127,8 +133,8 @@ if __name__ == '__main__':
     doc2category = {n: random.randrange(0, num_categories) for n in range(N)}
     documents = [np.nonzero(x)[0] for x in doc_word_matrix]
 
-    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(documents)
-    for i in tqdm(range(0, iterationNum)):
-        gibbs_sampling(documents, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
+    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count_alpha, topic_count_beta = random_initialize(documents)
+    for i in tqdm(range(0, iterationNum), position=0):
+        gibbs_sampling(documents, category_topic_dist, topic_word_dist, topic_count_alpha, topic_count_beta, word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(documents))
     print_topics(10)
