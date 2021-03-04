@@ -131,7 +131,6 @@ def main(args):
     # Loading data
     corpora = prepro_file_load("corpora")
     documents = list(prepro_file_load("id2pre_text").values())
-    documents = [re.sub("[\[\]',]", "", doc).split() for doc in documents]
     category_list = [[cat] for cat in list(prepro_file_load("id2category").values())]
     category_corpora = prepro_file_load("category_corpora")
 
