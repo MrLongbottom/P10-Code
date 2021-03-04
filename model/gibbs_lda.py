@@ -3,6 +3,7 @@ import time
 from typing import List
 
 import numpy as np
+from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 
@@ -116,10 +117,11 @@ if __name__ == '__main__':
     doc_word_matrix = np.array(doc_word_matrix.to_dense(), dtype=int)
     N = doc_word_matrix.shape[0]
     M = doc_word_matrix.shape[1]
-    doc_word_matrix = [np.nonzero(x)[0] for x in doc_word_matrix]
+    documents = [np.nonzero(x)[0] for x in doc_word_matrix]
+    train_docs, test_docs = train_test_split(documents, test_size=0.33, shuffle=True)
 
-    word_topic_assignment, document_topic_dist, topic_word_dist, topic_count = random_initialize(doc_word_matrix)
+    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(train_docs)
     for i in tqdm(range(0, iterationNum)):
-        gibbs_sampling(doc_word_matrix, document_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix))
+        gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
+        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(test_docs))
     print_topics(10)
