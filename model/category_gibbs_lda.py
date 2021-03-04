@@ -1,5 +1,5 @@
 import pickle
-import random
+from sklearn.model_selection import train_test_split
 import time
 from typing import List
 
@@ -124,11 +124,12 @@ if __name__ == '__main__':
     doc_word_matrix = np.array(doc_word_matrix.to_dense(), dtype=int)
     N = doc_word_matrix.shape[0]
     M = doc_word_matrix.shape[1]
-    doc2category = {n: random.randrange(0, num_categories) for n in range(N)}
+    doc2category = prepro_file_load("doc2category")
     documents = [np.nonzero(x)[0] for x in doc_word_matrix]
+    train_docs, test_docs = train_test_split(documents, test_size=0.33, shuffle=True)
 
-    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(documents)
+    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(train_docs)
     for i in tqdm(range(0, iterationNum)):
-        gibbs_sampling(documents, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(documents))
+        gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
+        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(test_docs))
     print_topics(10)
