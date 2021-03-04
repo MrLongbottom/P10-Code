@@ -13,6 +13,8 @@ def load_dict_file(filepath, separator='@'):
             key = int(kv[0]) if kv[0].isnumeric() else kv[0]
             if value[:2] == "['":
                 value = value[2:-2].split("', '")
+            elif value.isnumeric():
+                value = int(value)
             dictionary[key] = value
     return dictionary
 
