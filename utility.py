@@ -11,6 +11,8 @@ def load_dict_file(filepath, separator='@'):
             kv = line.split(separator)
             value = kv[1].replace('\n', '')
             key = int(kv[0]) if kv[0].isnumeric() else kv[0]
+            if value[:2] == "['":
+                value = value[2:-2].split("', '")
             dictionary[key] = value
     return dictionary
 
