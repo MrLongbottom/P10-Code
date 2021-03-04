@@ -127,7 +127,7 @@ if __name__ == '__main__':
     doc2category = {n: random.randrange(0, num_categories) for n in range(N)}
     documents = [np.nonzero(x)[0] for x in doc_word_matrix]
 
-    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(doc_word_matrix)
+    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(documents)
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(documents, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(documents))
