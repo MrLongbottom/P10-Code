@@ -15,3 +15,6 @@ doc_word_matrix@preprocess/generated_files/doc_word_matrix.pickle
 id2word@preprocess/generated_files/id2word.csv
 id2doc_name@preprocess/generated_files/id2doc.csv
 doc2word_ids@preprocess/generated_files/doc2word.csv
+doc2category@preprocess/generated_files/doc2cat.csv
+doc2author@preprocess/generated_files/doc2auth.csv
+doc2taxonomy@preprocess/generated_files/doc2tax.csv
