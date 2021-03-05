@@ -11,8 +11,10 @@ def load_dict_file(filepath, separator='@'):
             kv = line.split(separator)
             value = kv[1].replace('\n', '')
             key = int(kv[0]) if kv[0].isnumeric() else kv[0]
+            # check if value is list
             if value[:2] == "['":
                 value = value[2:-2].split("', '")
+            # check if value is number
             elif value.isnumeric():
                 value = int(value)
             dictionary[key] = value
