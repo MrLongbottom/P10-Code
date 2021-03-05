@@ -21,14 +21,19 @@ def preprocessing(printouts=False, save=True):
     bad_ids = [x for x in texts.keys() if x not in new_texts.keys()]
     id2doc_file = {num_id: name_id for num_id, name_id in enumerate(new_texts.keys())}
 
+    # remove duplicates
     categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
-    cat2id = {v: i for v, i in zip(list(set(categories.values())), range(len(set(categories.values()))))}
-    categories = {i: cat2id[v] for v, i in zip(categories.values(), range(len(categories)))}
     authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
-    auth2id = {v: i for v, i in zip(list(set(authors.values())), range(len(set(authors.values()))))}
-    authors = {i: auth2id[v] for v, i in zip(authors.values(), range(len(authors)))}
     taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
+
+    # make value -> id mappings
+    cat2id = {v: i for v, i in zip(list(set(categories.values())), range(len(set(categories.values()))))}
+    auth2id = {v: i for v, i in zip(list(set(authors.values())), range(len(set(authors.values()))))}
     tax2id = {v: i for v, i in zip(list(set(taxonomies.values())), range(len(set(taxonomies.values()))))}
+
+    # make doc_id -> meta_id mappings
+    categories = {i: cat2id[v] for v, i in zip(categories.values(), range(len(categories)))}
+    authors = {i: auth2id[v] for v, i in zip(authors.values(), range(len(authors)))}
     taxonomies = {i: tax2id[v] for v, i in zip(taxonomies.values(), range(len(taxonomies)))}
 
     texts = {e: v.replace('\n', '') for e, (k, v) in enumerate(texts.items()) if k not in bad_ids}
@@ -71,9 +76,7 @@ def preprocessing(printouts=False, save=True):
         doc2id.append([x for x in doc_id if x != -1])
     documents = doc2
 
-    doc2bow = []
-    for doc in documents:
-        doc2bow.append(corpora.doc2bow(doc))
+    doc2bow = make_doc2bow(corpora, documents)
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
 
@@ -92,6 +95,13 @@ def preprocessing(printouts=False, save=True):
     if printouts:
         print('Preprocessing Finished.')
     return corpora, documents, doc2bow, doc_word_matrix
+
+
+def make_doc2bow(corpora, documents):
+    doc2bow = []
+    for doc in documents:
+        doc2bow.append(corpora.doc2bow(doc))
+    return doc2bow
 
 
 def sparse_vector_document_representations(corpora, doc2bow):
@@ -144,5 +154,6 @@ def prepro_file_load(file_name):
 
 
 if __name__ == '__main__':
+    texts = prepro_file_load('id2pre_text')
     info = preprocessing(printouts=True, save=True)
     print('Finished Preprocessing')
