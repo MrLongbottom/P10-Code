@@ -5,6 +5,8 @@ from typing import List
 import numpy as np
 from tqdm import tqdm
 
+from preprocess.preprocessing import prepro_file_load
+import coherence
 
 def random_initialize(documents):
     """
@@ -87,7 +89,7 @@ def perplexity(documents: List[np.ndarray]) -> float:
     return np.exp(ll / (-n))
 
 
-def print_topics(num_of_word_per_topic: int = 10):
+def get_topics(num_of_word_per_topic: int = 10):
     """
     Looks at the topic word distribution and sorts each topic based on the word count
     :param num_of_word_per_topic: how many word is printed within each topic
@@ -101,7 +103,11 @@ def print_topics(num_of_word_per_topic: int = 10):
         for j in ids:
             topic_word.insert(0, id2token[j])
         topic_words.append(topic_word[0: min(num_of_word_per_topic, len(topic_word))])
-    print(topic_words)
+    return topic_words
+
+
+def get_coherence(doc2bow, dictionary, texts):
+    return coherence.coherence(topics=get_topics(), doc2bow=doc2bow, dictionary=dictionary, texts=texts)
 
 
 if __name__ == '__main__':
@@ -118,8 +124,12 @@ if __name__ == '__main__':
     M = doc_word_matrix.shape[1]
     doc_word_matrix = [np.nonzero(x)[0] for x in doc_word_matrix]
 
+    # things needed to calculate coherence
+    doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
+        prepro_file_load('id2pre_text').values())
+
     word_topic_assignment, document_topic_dist, topic_word_dist, topic_count = random_initialize(doc_word_matrix)
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(doc_word_matrix, document_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix))
-    print_topics(10)
+        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix), " Coherence: ", get_coherence(doc2bow, dictionary, texts))
+    print(get_topics(10))
