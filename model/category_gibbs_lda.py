@@ -134,8 +134,8 @@ if __name__ == '__main__':
     documents = [np.nonzero(x)[0] for x in doc_word_matrix]
     train_docs, test_docs = train_test_split(documents, test_size=0.33, shuffle=True)
 
-    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count_alpha, topic_count_beta = random_initialize(documents)
+    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count_alpha, topic_count_beta = random_initialize(train_docs)
     for i in tqdm(range(0, iterationNum), position=0):
-        gibbs_sampling(documents, category_topic_dist, topic_word_dist, topic_count_alpha, topic_count_beta, word_topic_assignment)
+        gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, topic_count_alpha, topic_count_beta, word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(test_docs))
     print_topics(10)
