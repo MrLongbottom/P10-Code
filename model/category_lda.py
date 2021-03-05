@@ -81,7 +81,7 @@ def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
     topic_words_posterior = pyro.param(
         "topic_words_posterior",
         lambda: torch.ones(args.num_topics, args.num_words),
-        constraint=constraints.greater_than(0.5))  # TODO constraint may be too restrictive
+        constraint=constraints.positive)  # TODO X constraint may be too restrictive
     with pyro.plate("topics", args.num_topics):
         pyro.sample("topic_weights", dist.Gamma(topic_weights_posterior, 1.))
         pyro.sample("topic_words", dist.Dirichlet(topic_words_posterior))
@@ -93,7 +93,7 @@ def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
     category_topics_posterior = pyro.param(
         "category_topics_posterior",
         lambda: torch.ones(args.num_categories, args.num_topics),
-        constraint=constraints.greater_than(0.5))
+        constraint=constraints.positive)
     with pyro.plate("categories", args.num_categories):
         pyro.sample("category_weights", dist.Gamma(category_weights_posterior, 1.))
         pyro.sample("category_topics", dist.Dirichlet(category_topics_posterior))
@@ -101,7 +101,7 @@ def parametrized_guide(doc_word_data, category_data, args, batch_size=None):
     doc_category_posterior = pyro.param(
         "doc_category_posterior",
         lambda: torch.ones(args.num_categories),
-        constraint=constraints.less_than(args.num_categories))
+        constraint=constraints.positive)
     for doc in pyro.plate("documents", args.num_docs, batch_size):
         pyro.sample("doc_categories_{}".format(doc), dist.Delta(doc_category_posterior, event_dim=1),
                     infer={'is_auxiliary': True})  # TODO might be worth finding out why is_auxilliary is necessary here
@@ -155,7 +155,7 @@ def main(args):
     # We'll train using SVI.
     logging.info('-' * 40)
     logging.info('Training on {} documents'.format(args.num_docs))
-    Elbo = JitTraceEnum_ELBO if args.jit else Trace_ELBO  # TODO test TraceEnum_ vs Trace_ vs TraceMeanField_
+    Elbo = JitTraceEnum_ELBO if args.jit else Trace_ELBO  # TODO X test TraceEnum_ vs Trace_ vs TraceMeanField_
     elbo = Elbo(max_plate_nesting=2)  # TODO Changing the max plate nesting value might be worth looking at
     optim = ClippedAdam({'lr': args.learning_rate})  # TODO X try different learning rates
     # TODO try something other than ClippedAdam or changing its parameters
