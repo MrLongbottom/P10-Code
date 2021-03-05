@@ -7,9 +7,9 @@
 corpora@preprocess/generated_files/corpora
 id2raw_text@preprocess/generated_files/raw_texts.csv
 id2pre_text@preprocess/generated_files/pre_texts.csv
-id2category@preprocess/generated_files/categories.csv
-id2author@preprocess/generated_files/authors.csv
-id2taxonomy@preprocess/generated_files/taxonomies.csv
+id2category@preprocess/generated_files/id2cat.csv
+id2author@preprocess/generated_files/id2auth.csv
+id2taxonomy@preprocess/generated_files/id2tax.csv
 doc2bow@preprocess/generated_files/doc2bow.pickle
 doc_word_matrix@preprocess/generated_files/doc_word_matrix.pickle
 id2word@preprocess/generated_files/id2word.csv
