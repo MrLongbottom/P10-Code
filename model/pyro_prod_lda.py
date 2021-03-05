@@ -1,4 +1,6 @@
 import os
+import logging
+
 import pyro
 import pyro.distributions as dist
 import torch
@@ -14,13 +16,21 @@ from tqdm import trange
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 
-assert pyro.__version__.startswith('1.5.2')
+from preprocess.preprocessing import prepro_file_load
+
+logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
+
+assert pyro.__version__.startswith('1.6.0')
 # Enable smoke test - run the notebook cells on CI.
 smoke_test = 'CI' in os.environ
+
+logging.info(f"CUDA available: {torch.cuda.is_available()}")
 
 news = fetch_20newsgroups(subset='all')
 vectorizer = CountVectorizer(max_df=0.5, min_df=20)
 docs = torch.from_numpy(vectorizer.fit_transform(news['data']).toarray())
+
+docs = prepro_file_load("doc_word_matrix").to_dense()
 
 vocab = pd.DataFrame(columns=['word', 'index'])
 vocab['word'] = vectorizer.get_feature_names()
@@ -115,7 +125,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 num_topics = 20 if not smoke_test else 3
 docs = docs.float().to(device)
-batch_size = 8
+batch_size = 32
 learning_rate = 1e-3
 num_epochs  = 50 if not smoke_test else 1
 
@@ -134,6 +144,8 @@ optimizer = pyro.optim.Adam({"lr": learning_rate})
 svi = SVI(prodLDA.model, prodLDA.guide, optimizer, loss=TraceMeanField_ELBO())
 num_batches = int(math.ceil(docs.shape[0] / batch_size)) if not smoke_test else 1
 
+losses = []
+
 bar = trange(num_epochs)
 for epoch in bar:
     running_loss = 0.0
@@ -142,8 +154,24 @@ for epoch in bar:
         loss = svi.step(batch_docs)
         running_loss += loss / batch_docs.size(0)
 
+    losses.append(running_loss)
     bar.set_postfix(epoch_loss='{:.2e}'.format(running_loss))
+    if epoch % 5 == 0:
+        logging.info('{: >5d}\t{}'.format(epoch, '{:.2e}'.format(running_loss)))
 
+# Plot loss over epochs
+plt.plot(losses)
+plt.title("ELBO")
+plt.xlabel("epoch")
+plt.ylabel("loss")
+# plot_file_name = "../loss-2017_categories-" + str(args.num_categories) + \
+#                  "_topics-" + str(args.num_topics) + \
+#                  "_batch-" + str(args.batch_size) + \
+#                  "_lr-" + str(args.learning_rate) + \
+#                  "_data-size-" + str(data_slice) + \
+#                  ".png"
+plt.savefig("../ProdLDA-2017-loss.png")
+plt.show()
 
 def plot_word_cloud(b, ax, v, n):
     sorted_, indices = torch.sort(b, descending=True)
@@ -167,5 +195,5 @@ if not smoke_test:
         plot_word_cloud(beta[n], axs[i, j], vocab, n)
     axs[-1, -1].axis('off');
 
-    plt.savefig("wordcloud.png")
+    plt.savefig("../wordcloud.png")
     plt.show()
