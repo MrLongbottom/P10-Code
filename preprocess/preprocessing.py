@@ -71,9 +71,7 @@ def preprocessing(printouts=False, save=True):
         doc2id.append([x for x in doc_id if x != -1])
     documents = doc2
 
-    doc2bow = []
-    for doc in documents:
-        doc2bow.append(corpora.doc2bow(doc))
+    doc2bow = make_doc2bow(corpora, documents)
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
 
@@ -92,6 +90,13 @@ def preprocessing(printouts=False, save=True):
     if printouts:
         print('Preprocessing Finished.')
     return corpora, documents, doc2bow, doc_word_matrix
+
+
+def make_doc2bow(corpora, documents):
+    doc2bow = []
+    for doc in documents:
+        doc2bow.append(corpora.doc2bow(doc))
+    return doc2bow
 
 
 def sparse_vector_document_representations(corpora, doc2bow):
@@ -144,5 +149,6 @@ def prepro_file_load(file_name):
 
 
 if __name__ == '__main__':
+    texts = prepro_file_load('id2pre_text')
     info = preprocessing(printouts=True, save=True)
     print('Finished Preprocessing')

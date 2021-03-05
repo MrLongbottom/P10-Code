@@ -7,6 +7,7 @@ import numpy as np
 from tqdm import tqdm
 
 from preprocess.preprocessing import prepro_file_load
+import coherence
 
 
 def random_initialize(documents):
@@ -94,11 +95,11 @@ def perplexity(documents: List[np.ndarray]) -> float:
     return np.exp(ll / (-n))
 
 
-def print_topics(num_of_word_per_topic: int = 10):
+def get_topics(num_of_word_per_topic: int = 10):
     """
     Looks at the topic word distribution and sorts each topic based on the word count
     :param num_of_word_per_topic: how many word is printed within each topic
-    :return: print the topics
+    :return: list of list of strings representing the words in each topic
     """
     topic_words = []
     id2token = {v: k for k, v in corpora.token2id.items()}
@@ -108,7 +109,11 @@ def print_topics(num_of_word_per_topic: int = 10):
         for j in ids:
             topic_word.insert(0, id2token[j])
         topic_words.append(topic_word[0: min(num_of_word_per_topic, len(topic_word))])
-    print(topic_words)
+    return topic_words
+
+
+def get_coherence(doc2bow, dictionary, texts):
+    return coherence.coherence(topics=get_topics(), doc2bow=doc2bow, dictionary=dictionary, texts=texts)
 
 
 if __name__ == '__main__':
@@ -127,9 +132,12 @@ if __name__ == '__main__':
     doc2category = prepro_file_load("doc2category")
     documents = [np.nonzero(x)[0] for x in doc_word_matrix]
     train_docs, test_docs = train_test_split(documents, test_size=0.33, shuffle=True)
-
     word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(train_docs)
+
+    # things needed to calculate coherence
+    doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(prepro_file_load('id2pre_text').values())
+
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(test_docs))
-    print_topics(10)
+        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(test_docs), " Coherence: ", get_coherence(doc2bow, dictionary, texts))
+    print(get_topics(10))
