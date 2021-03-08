@@ -197,14 +197,14 @@ def main():
         plt.show()
 
         # Word cloud plotting
-        beta = prodLDA.beta()
-        fig, axs = plt.subplots(7, 3, figsize=(14, 24))
-        for n in range(beta.shape[0]):
-            i, j = divmod(n, 3)
-            plot_word_cloud(beta[n], axs[i, j], vocab, n)
-        axs[-1, -1].axis('off')
-        plt.savefig("../wordcloud.png")
-        plt.show()
+        # beta = prodLDA.beta()
+        # fig, axs = plt.subplots(7, 3, figsize=(14, 24))
+        # for n in range(beta.shape[0]):
+        #     i, j = divmod(n, 3)
+        #     plot_word_cloud(beta[n], axs[i, j], vocab, n)
+        # axs[-1, -1].axis('off')
+        # plt.savefig("../wordcloud.png")
+        # plt.show()
 
 
 if __name__ == '__main__':
