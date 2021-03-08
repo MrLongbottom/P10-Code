@@ -20,25 +20,6 @@ from preprocess.preprocessing import prepro_file_load
 
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
-assert pyro.__version__.startswith('1.6.0')
-# Enable smoke test - run the notebook cells on CI.
-smoke_test = 'CI' in os.environ
-
-logging.info(f"CUDA available: {torch.cuda.is_available()}")
-
-news = fetch_20newsgroups(subset='all')
-vectorizer = CountVectorizer(max_df=0.5, min_df=20)
-docs = torch.from_numpy(vectorizer.fit_transform(news['data']).toarray())
-
-docs = prepro_file_load("doc_word_matrix").to_dense()
-
-vocab = pd.DataFrame(columns=['word', 'index'])
-vocab['word'] = vectorizer.get_feature_names()
-vocab['index'] = vocab.index
-
-print('Dictionary size: %d' % len(vocab))
-print('Corpus size: {}'.format(docs.shape))
-
 
 class Encoder(nn.Module):
     # Base class for the encoder net, used in the guide
@@ -117,63 +98,8 @@ class ProdLDA(nn.Module):
         # beta matrix elements are the weights of the FC layer on the decoder
         return self.decoder.beta.weight.cpu().detach().T
 
-# setting global variables
-seed = 0
-torch.manual_seed(seed)
-pyro.set_rng_seed(seed)
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-num_topics = 20 if not smoke_test else 3
-docs = docs.float().to(device)
-batch_size = 32
-learning_rate = 1e-3
-num_epochs  = 50 if not smoke_test else 1
-
-# training
-pyro.clear_param_store()
-
-prodLDA = ProdLDA(
-    vocab_size=docs.shape[1],
-    num_topics=num_topics,
-    hidden=100 if not smoke_test else 10,
-    dropout=0.2
-)
-prodLDA.to(device)
-
-optimizer = pyro.optim.Adam({"lr": learning_rate})
-svi = SVI(prodLDA.model, prodLDA.guide, optimizer, loss=TraceMeanField_ELBO())
-num_batches = int(math.ceil(docs.shape[0] / batch_size)) if not smoke_test else 1
-
-losses = []
-
-bar = trange(num_epochs)
-for epoch in bar:
-    running_loss = 0.0
-    for i in range(num_batches):
-        batch_docs = docs[i * batch_size:(i + 1) * batch_size, :]
-        loss = svi.step(batch_docs)
-        running_loss += loss / batch_docs.size(0)
-
-    losses.append(running_loss)
-    bar.set_postfix(epoch_loss='{:.2e}'.format(running_loss))
-    if epoch % 5 == 0:
-        logging.info('{: >5d}\t{}'.format(epoch, '{:.2e}'.format(running_loss)))
-
-# Plot loss over epochs
-plt.plot(losses)
-plt.title("ELBO")
-plt.xlabel("epoch")
-plt.ylabel("loss")
-# plot_file_name = "../loss-2017_categories-" + str(args.num_categories) + \
-#                  "_topics-" + str(args.num_topics) + \
-#                  "_batch-" + str(args.batch_size) + \
-#                  "_lr-" + str(args.learning_rate) + \
-#                  "_data-size-" + str(data_slice) + \
-#                  ".png"
-plt.savefig("../ProdLDA-2017-loss.png")
-plt.show()
-
-def plot_word_cloud(b, ax, v, n):
+def plot_word_cloud(b, ax, vocab, n):
     sorted_, indices = torch.sort(b, descending=True)
     df = pd.DataFrame(indices[:100].numpy(), columns=['index'])
     words = pd.merge(df, vocab[['index', 'word']],
@@ -187,13 +113,99 @@ def plot_word_cloud(b, ax, v, n):
     ax.axis("off")
 
 
-if not smoke_test:
-    beta = prodLDA.beta()
-    fig, axs = plt.subplots(7, 3, figsize=(14, 24))
-    for n in range(beta.shape[0]):
-        i, j = divmod(n, 3)
-        plot_word_cloud(beta[n], axs[i, j], vocab, n)
-    axs[-1, -1].axis('off');
+def main():
+    assert pyro.__version__.startswith('1.6.0')
+    # Enable smoke test to test functionality
+    smoke_test = False
 
-    plt.savefig("../wordcloud.png")
-    plt.show()
+    logging.info(f"CUDA available: {torch.cuda.is_available()}")
+
+    logging.info("Loading data...")
+    # News dataset for testing
+    news = fetch_20newsgroups(subset='all')
+    vectorizer = CountVectorizer(max_df=0.5, min_df=20)
+    docs = torch.from_numpy(vectorizer.fit_transform(news['data']).toarray())
+
+    # Loading data
+    docs = prepro_file_load("doc_word_matrix").to_dense()
+
+    vocab = pd.DataFrame(columns=['word', 'index'])
+    vocab['word'] = vectorizer.get_feature_names()
+    vocab['index'] = vocab.index
+
+    logging.info(f"Dictionary size: {len(vocab)}")
+    logging.info(f"Corpus size: {docs.shape}")
+
+    # Setting global variables
+    seed = 0
+    torch.manual_seed(seed)
+    pyro.set_rng_seed(seed)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    docs = docs.float().to(device)
+    num_categories = 0
+    num_topics = 20 if not smoke_test else 3
+    batch_size = 32
+    learning_rate = 1e-3
+    num_epochs = 50 if not smoke_test else 1
+
+    # Training
+    pyro.clear_param_store()
+
+    prodLDA = ProdLDA(
+        vocab_size=docs.shape[1],
+        num_topics=num_topics,
+        hidden=100 if not smoke_test else 10,
+        dropout=0.2
+    )
+    prodLDA.to(device)
+
+    optimizer = pyro.optim.Adam({"lr": learning_rate})
+    svi = SVI(prodLDA.model, prodLDA.guide, optimizer, loss=TraceMeanField_ELBO())
+    num_batches = int(math.ceil(docs.shape[0] / batch_size)) if not smoke_test else 1
+
+    losses = []
+
+    logging.info("Training...")
+    bar = trange(num_epochs)
+    for epoch in bar:
+        running_loss = 0.0
+        for i in range(num_batches):
+            batch_docs = docs[i * batch_size:(i + 1) * batch_size, :]
+            loss = svi.step(batch_docs)
+            running_loss += loss / batch_docs.size(0)
+
+        losses.append(running_loss)
+        bar.set_postfix(epoch_loss='{:.2e}'.format(running_loss))
+        if epoch % 5 == 0:
+            logging.info('{: >5d}\t{}'.format(epoch, '{:.2e}'.format(running_loss)))
+    logging.info(f"Final loss: {'{:.2e}'.format(losses[-1])}/{losses[-1]}")
+
+    if not smoke_test:
+        # Plot loss over epochs
+        plt.plot(losses)
+        plt.title("ELBO")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plot_file_name = "../ProdLDA-loss-2017_categories-" + str(num_categories) + \
+                         "_topics-" + str(num_topics) + \
+                         "_batch-" + str(batch_size) + \
+                         "_lr-" + str(learning_rate) + \
+                         "_epochs-" + str(num_epochs) + \
+                         ".png"
+        plt.savefig(plot_file_name)
+        plt.show()
+
+        # Word cloud plotting
+        beta = prodLDA.beta()
+        fig, axs = plt.subplots(7, 3, figsize=(14, 24))
+        for n in range(beta.shape[0]):
+            i, j = divmod(n, 3)
+            plot_word_cloud(beta[n], axs[i, j], vocab, n)
+        axs[-1, -1].axis('off')
+        plt.savefig("../wordcloud.png")
+        plt.show()
+
+
+if __name__ == '__main__':
+    main()
