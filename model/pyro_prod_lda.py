@@ -128,10 +128,11 @@ def main():
 
     # Loading data
     docs = prepro_file_load("doc_word_matrix").to_dense()
+    id2word = prepro_file_load("id2word")
 
-    vocab = pd.DataFrame(columns=['word', 'index'])
-    vocab['word'] = vectorizer.get_feature_names()
-    vocab['index'] = vocab.index
+    vocab = pd.DataFrame(columns=['index', 'word'])
+    vocab['index'] = list(id2word.keys())
+    vocab['word'] = list(id2word.values())
 
     logging.info(f"Dictionary size: {len(vocab)}")
     logging.info(f"Corpus size: {docs.shape}")
@@ -144,7 +145,7 @@ def main():
 
     docs = docs.float().to(device)
     num_categories = 0
-    num_topics = 20 if not smoke_test else 3
+    num_topics = 30 if not smoke_test else 3
     batch_size = 32
     learning_rate = 1e-3
     num_epochs = 50 if not smoke_test else 1
@@ -195,6 +196,14 @@ def main():
                          ".png"
         plt.savefig(plot_file_name)
         plt.show()
+
+        # Logging top 10 weighted words in topics
+        beta = prodLDA.beta()
+        for n in range(beta.shape[0]):
+            sorted_, indices = torch.sort(beta[n], descending=True)
+            df = pd.DataFrame(indices[:10].numpy(), columns=['index'])
+            words = pd.merge(df, vocab[['index', 'word']], how='left', on='index')['word'].values.tolist()
+            logging.info(f"Topic {n} sorted words: {words}")
 
         # Word cloud plotting
         # beta = prodLDA.beta()
