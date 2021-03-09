@@ -40,8 +40,8 @@ def preprocessing(printouts=False, save=True):
     if save:
         if printouts:
             print("Saving data mapping files")
-        utility.save_dict_file('../' + paths['id2doc_name'], id2doc_file)
-        utility.save_dict_file('../' + paths['id2raw_text'], texts)
+        utility.save_dict_file('../' + paths['id2doc'], id2doc_file)
+        utility.save_dict_file('../' + paths['doc2raw_text'], texts)
         utility.save_dict_file('../' + paths['id2category'], {v: k for k, v in cat2id.items()})
         utility.save_dict_file('../' + paths['id2author'], {v: k for k, v in auth2id.items()})
         utility.save_dict_file('../' + paths['id2taxonomy'], {v: k for k, v in tax2id.items()})
@@ -91,8 +91,8 @@ def preprocessing(printouts=False, save=True):
         with open('../' + paths['doc_word_matrix'], "wb") as file:
             pickle.dump(doc_word_matrix, file)
         utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
-        utility.save_dict_file('../' + paths['id2pre_text'], documents)
-        utility.save_dict_file('../' + paths['doc2word_ids'], doc2id)
+        utility.save_dict_file('../' + paths['doc2pre_text'], documents)
+        utility.save_dict_file('../' + paths['doc2word'], doc2id)
 
     if printouts:
         print('Preprocessing Finished.')
