@@ -7,7 +7,7 @@ import torch.sparse
 import pickle
 
 
-def preprocessing(printouts=False, save=True, folder_name="", json_file):
+def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     paths = utility.load_dict_file("../paths.csv")
 
     # load data file
@@ -161,5 +161,5 @@ def prepro_file_load(file_name, folder_name=None):
 
 
 if __name__ == '__main__':
-    info = preprocessing(printouts=True, save=True, folder_name='test', json_file='full_json')
+    info = preprocessing(json_file='full_json', printouts=True, save=True, folder_name='test')
     print('Finished Preprocessing')
