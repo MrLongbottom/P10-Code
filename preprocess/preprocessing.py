@@ -7,13 +7,13 @@ import torch.sparse
 import pickle
 
 
-def preprocessing(printouts=False, save=True):
+def preprocessing(printouts=False, save=True, folder_name="", json_file):
     paths = utility.load_dict_file("../paths.csv")
 
     # load data file
     if printouts:
         print("Loading dataset")
-    texts, categories, authors, taxonomies = load_document_file('../' + paths['2017_json'])
+    texts, categories, authors, taxonomies = load_document_file('../' + paths[json_file])
 
     # removing duplicates from dictionaries
     rev = {v: k for k, v in texts.items()}
@@ -40,14 +40,14 @@ def preprocessing(printouts=False, save=True):
     if save:
         if printouts:
             print("Saving data mapping files")
-        utility.save_dict_file('../' + paths['id2doc'], id2doc_file)
-        utility.save_dict_file('../' + paths['doc2raw_text'], texts)
-        utility.save_dict_file('../' + paths['id2category'], {v: k for k, v in cat2id.items()})
-        utility.save_dict_file('../' + paths['id2author'], {v: k for k, v in auth2id.items()})
-        utility.save_dict_file('../' + paths['id2taxonomy'], {v: k for k, v in tax2id.items()})
-        utility.save_dict_file('../' + paths['doc2category'], categories)
-        utility.save_dict_file('../' + paths['doc2author'], authors)
-        utility.save_dict_file('../' + paths['doc2taxonomy'], taxonomies)
+        utility.save_dict_file('../' + update_path(paths['id2doc'], folder_name), id2doc_file)
+        utility.save_dict_file('../' + update_path(paths['doc2raw_text'], folder_name), texts)
+        utility.save_dict_file('../' + update_path(paths['id2category'], folder_name), {v: k for k, v in cat2id.items()})
+        utility.save_dict_file('../' + update_path(paths['id2author'], folder_name), {v: k for k, v in auth2id.items()})
+        utility.save_dict_file('../' + update_path(paths['id2taxonomy'], folder_name), {v: k for k, v in tax2id.items()})
+        utility.save_dict_file('../' + update_path(paths['doc2category'], folder_name), categories)
+        utility.save_dict_file('../' + update_path(paths['doc2author'], folder_name), authors)
+        utility.save_dict_file('../' + update_path(paths['doc2taxonomy'], folder_name), taxonomies)
 
     # tokenize (document token generators)
     if printouts:
@@ -86,17 +86,27 @@ def preprocessing(printouts=False, save=True):
         if printouts:
             print("Saving Corpora & Preprocessed Text")
         corpora.save('../' + paths['corpora'])
-        with open('../' + paths['doc2bow'], "wb") as file:
+        with open('../' + update_path(paths['doc2bow'], folder_name), "wb") as file:
             pickle.dump(doc2bow, file)
-        with open('../' + paths['doc_word_matrix'], "wb") as file:
+        with open('../' + update_path(paths['doc_word_matrix'], folder_name), "wb") as file:
             pickle.dump(doc_word_matrix, file)
-        utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
-        utility.save_dict_file('../' + paths['doc2pre_text'], documents)
-        utility.save_dict_file('../' + paths['doc2word'], doc2id)
+        utility.save_dict_file('../' + update_path(paths['id2word'], folder_name), {v: k for k, v in corpora.token2id.items()})
+        utility.save_dict_file('../' + update_path(paths['doc2pre_text'], folder_name), documents)
+        utility.save_dict_file('../' + update_path(paths['doc2word'], folder_name), doc2id)
 
     if printouts:
         print('Preprocessing Finished.')
     return corpora, documents, doc2bow, doc_word_matrix
+
+
+def update_path(path, folder_name):
+    if folder_name == "":
+        return path
+    paths = utility.load_dict_file("../paths.csv")
+    path = paths['doc2pre_text'].split('/')
+    path.insert(len(path) - 1, folder_name)
+    path = "/".join(path)
+    return path
 
 
 def sparse_vector_document_representations(corpora, doc2bow):
@@ -133,12 +143,14 @@ def load_document_file(filename):
     return documents, categories, authors, taxonomies
 
 
-def prepro_file_load(file_name):
+def prepro_file_load(file_name, folder_name=None):
     paths = utility.load_dict_file("../paths.csv")
     if file_name not in paths:
         raise Exception('File name not in paths file')
     else:
         file_path = '../' + paths[file_name]
+        if folder_name is not None:
+            file_path = update_path(file_path, folder_name)
         if file_path[-4:] == '.csv':
             return utility.load_dict_file(file_path)
         elif file_path[-7:] == '.pickle':
@@ -149,5 +161,5 @@ def prepro_file_load(file_name):
 
 
 if __name__ == '__main__':
-    info = preprocessing(printouts=True, save=True)
+    info = preprocessing(printouts=True, save=True, folder_name='test', json_file='full_json')
     print('Finished Preprocessing')
