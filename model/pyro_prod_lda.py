@@ -99,6 +99,84 @@ class ProdLDA(nn.Module):
         return self.decoder.beta.weight.cpu().detach().T
 
 
+class CategoryEncoder(nn.Module):
+    # Base class for the encoder net, used in the guide
+    def __init__(self, vocab_size, num_topics, hidden, dropout):
+        super().__init__()
+        self.drop = nn.Dropout(dropout)  # to avoid component collapse
+        self.fc1 = nn.Linear(vocab_size, hidden)
+        self.fc2 = nn.Linear(hidden, hidden)
+        self.fcmu = nn.Linear(hidden, num_topics)
+        self.fclv = nn.Linear(hidden, num_topics)
+        self.bnmu = nn.BatchNorm1d(num_topics)  # to avoid component collapse
+        self.bnlv = nn.BatchNorm1d(num_topics)  # to avoid component collapse
+
+    def forward(self, inputs):
+        h = F.softplus(self.fc1(inputs))
+        h = F.softplus(self.fc2(h))
+        h = self.drop(h)
+        # μ and Σ are the outputs
+        theta_loc = self.bnmu(self.fcmu(h))
+        theta_scale = self.bnlv(self.fclv(h))
+        theta_scale = (0.5 * theta_scale).exp()  # Enforces positivity
+        return theta_loc, theta_scale
+
+
+class CategoryDecoder(nn.Module):
+    # Base class for the decoder net, used in the model
+    def __init__(self, vocab_size, num_topics, dropout):
+        super().__init__()
+        self.beta = nn.Linear(num_topics, vocab_size)
+        self.bn = nn.BatchNorm1d(vocab_size)
+        self.drop = nn.Dropout(dropout)
+
+    def forward(self, inputs):
+        inputs = self.drop(inputs)
+        # the output is σ(βθ)
+        return F.softmax(self.bn(self.beta(inputs)), dim=1)
+
+
+class CategoryProdLDA(nn.Module):
+    def __init__(self, vocab_size, num_topics, hidden, dropout):
+        super().__init__()
+        self.vocab_size = vocab_size
+        self.num_topics = num_topics
+        self.encoder = CategoryEncoder(vocab_size, num_topics, hidden, dropout)
+        self.decoder = CategoryDecoder(vocab_size, num_topics, dropout)
+
+    def model(self, docs=None):
+        pyro.module("decoder", self.decoder)
+        with pyro.plate("documents", docs.shape[0]):
+            # Dirichlet prior  𝑝(𝜃|𝛼) is replaced by a log-normal distribution
+            theta_loc = docs.new_zeros((docs.shape[0], self.num_topics))
+            theta_scale = docs.new_ones((docs.shape[0], self.num_topics))
+            theta = pyro.sample(
+                "theta", dist.LogNormal(theta_loc, theta_scale).to_event(1))
+            theta = theta / theta.sum(-1, keepdim=True)
+
+            # conditional distribution of 𝑤𝑛 is defined as
+            # 𝑤𝑛|𝛽,𝜃 ~ Categorical(𝜎(𝛽𝜃))
+            count_param = self.decoder(theta)
+            pyro.sample(
+                'obs',
+                dist.Multinomial(docs.shape[1], count_param).to_event(1),
+                obs=docs
+            )
+
+    def guide(self, docs=None):
+        pyro.module("encoder", self.encoder)
+        with pyro.plate("documents", docs.shape[0]):
+            # Dirichlet prior  𝑝(𝜃|𝛼) is replaced by a log-normal distribution,
+            # where μ and Σ are the encoder network outputs
+            theta_loc, theta_scale = self.encoder(docs)
+            theta = pyro.sample(
+                "theta", dist.LogNormal(theta_loc, theta_scale).to_event(1))
+
+    def beta(self):
+        # beta matrix elements are the weights of the FC layer on the decoder
+        return self.decoder.beta.weight.cpu().detach().T
+
+
 def plot_word_cloud(b, ax, vocab, n):
     sorted_, indices = torch.sort(b, descending=True)
     df = pd.DataFrame(indices[:100].numpy(), columns=['index'])
@@ -153,7 +231,7 @@ def main():
     # Training
     pyro.clear_param_store()
 
-    prodLDA = ProdLDA(
+    prodLDA = CategoryProdLDA(
         vocab_size=docs.shape[1],
         num_topics=num_topics,
         hidden=100 if not smoke_test else 10,
