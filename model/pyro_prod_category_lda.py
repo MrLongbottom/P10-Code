@@ -26,7 +26,7 @@ class CategoryEncoder(nn.Module):
     def __init__(self, vocab_size, num_topics, num_categories, hidden, dropout):
         super().__init__()
         self.drop = nn.Dropout(dropout)  # to avoid component collapse
-        self.fc1 = nn.Linear(vocab_size, hidden)
+        self.fc1 = nn.Linear(1, hidden)  # TODO maybe input is better as one hot vector
         self.fc2 = nn.Linear(hidden, hidden)
         self.fcmu = nn.Linear(hidden, num_topics)
         self.fclv = nn.Linear(hidden, num_topics)
@@ -88,10 +88,10 @@ class CategoryProdLDA(nn.Module):
 
     def guide(self, docs=None, doc_categories=None):
         pyro.module("encoder", self.encoder)
-        with pyro.plate("documents", docs.shape[0]):
+        with pyro.plate("document_categories", doc_categories.shape[0]):
             # Dirichlet prior  𝑝(𝜃|𝛼) is replaced by a log-normal distribution,
             # where μ and Σ are the encoder network outputs
-            theta_loc, theta_scale = self.encoder(docs)
+            theta_loc, theta_scale = self.encoder(doc_categories)
             theta = pyro.sample(
                 "theta", dist.LogNormal(theta_loc, theta_scale).to_event(1))
 
@@ -134,11 +134,11 @@ def main():
 
     docs = docs.float()
     doc_categories = doc_categories.float()
-    num_categories = len(id2cat)
+    num_categories = len(id2cat) if not smoke_test else 2
     num_topics = num_categories * 2 if not smoke_test else 3
     batch_size = 32
     learning_rate = 1e-3
-    num_epochs = 50 if not smoke_test else 1
+    num_epochs = 10 if not smoke_test else 1
 
     # Training
     pyro.clear_param_store()
