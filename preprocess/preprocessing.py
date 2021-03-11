@@ -5,6 +5,7 @@ import utility
 import itertools
 import torch.sparse
 import pickle
+import numpy as np
 
 
 def preprocessing(printouts=False, save=True):
@@ -13,7 +14,7 @@ def preprocessing(printouts=False, save=True):
     # load data file
     if printouts:
         print("Loading dataset")
-    texts, categories, authors, taxonomies = load_document_file('../' + paths['2017_json'])
+    texts, categories, authors, taxonomies = load_document_file('../' + paths['full_json'])
 
     # removing duplicates from dictionaries
     rev = {v: k for k, v in texts.items()}
@@ -80,7 +81,9 @@ def preprocessing(printouts=False, save=True):
     for doc in documents:
         doc2bow.append(corpora.doc2bow(doc))
 
-    doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
+    # Construct the doc word matrix by using mem map
+    shape = (corpora.num_docs, len(corpora))
+    mm_doc_word_matrix = save_memmap_matrix("doc_word_matrix", doc2bow, shape)
 
     if save:
         if printouts:
@@ -88,15 +91,15 @@ def preprocessing(printouts=False, save=True):
         corpora.save('../' + paths['corpora'])
         with open('../' + paths['doc2bow'], "wb") as file:
             pickle.dump(doc2bow, file)
-        with open('../' + paths['doc_word_matrix'], "wb") as file:
-            pickle.dump(doc_word_matrix, file)
+        # with open('../' + paths['doc_word_matrix'], "wb") as file:
+        #     pickle.dump(doc_word_matrix, file)
         utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
         utility.save_dict_file('../' + paths['id2pre_text'], documents)
         utility.save_dict_file('../' + paths['doc2word_ids'], doc2id)
 
     if printouts:
         print('Preprocessing Finished.')
-    return corpora, documents, doc2bow, doc_word_matrix
+    return corpora, documents, doc2bow, mm_doc_word_matrix
 
 
 def sparse_vector_document_representations(corpora, doc2bow):
@@ -106,8 +109,23 @@ def sparse_vector_document_representations(corpora, doc2bow):
     for doc in tqdm(doc2bow):
         [doc_values.append(y) for x, y in doc]
     sparse_docs = torch.sparse.FloatTensor(torch.LongTensor(doc_keys).t(), torch.FloatTensor(doc_values),
-                                          torch.Size([corpora.num_docs, len(corpora)]))
+                                           torch.Size([corpora.num_docs, len(corpora)]))
     return sparse_docs
+
+
+def save_memmap_matrix(name: str, doc2bow, shape: (int, int)):
+    paths = utility.load_dict_file("../paths.csv")
+    mm_doc_word_matrix = np.memmap('../' + paths[name], dtype=np.int, mode='w+', shape=shape)
+    for doc_index, words in enumerate(doc2bow):
+        for word_index, word_count in words:
+            mm_doc_word_matrix[doc_index, word_index] = word_count
+    return mm_doc_word_matrix
+
+
+def load_memmap_matrix(name: str):
+    corpora = prepro_file_load("corpora")
+    shape = (corpora.num_docs, len(corpora))
+    return np.memmap(f'{name}', dtype=np.int, shape=shape)
 
 
 def load_document_file(filename):
