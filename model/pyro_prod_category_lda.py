@@ -100,20 +100,6 @@ class CategoryProdLDA(nn.Module):
         return self.decoder.beta.weight.cpu().detach().T
 
 
-def plot_word_cloud(b, ax, vocab, n):
-    sorted_, indices = torch.sort(b, descending=True)
-    df = pd.DataFrame(indices[:100].numpy(), columns=['index'])
-    words = pd.merge(df, vocab[['index', 'word']],
-                     how='left', on='index')['word'].values.tolist()
-    sizes = (sorted_[:100] * 1000).int().numpy().tolist()
-    freqs = {words[i]: sizes[i] for i in range(len(words))}
-    wc = WordCloud(background_color="white", width=800, height=500)
-    wc = wc.generate_from_frequencies(freqs)
-    ax.set_title('Topic %d' % (n + 1))
-    ax.imshow(wc, interpolation='bilinear')
-    ax.axis("off")
-
-
 def main():
     assert pyro.__version__.startswith('1.6.0')
     # Enable smoke test to test functionality
@@ -210,16 +196,6 @@ def main():
             df = pd.DataFrame(indices[:10].numpy(), columns=['index'])
             words = pd.merge(df, vocab[['index', 'word']], how='left', on='index')['word'].values.tolist()
             logging.info(f"Topic {n} sorted words: {words}")
-
-        # Word cloud plotting
-        # beta = prodLDA.beta()
-        # fig, axs = plt.subplots(7, 3, figsize=(14, 24))
-        # for n in range(beta.shape[0]):
-        #     i, j = divmod(n, 3)
-        #     plot_word_cloud(beta[n], axs[i, j], vocab, n)
-        # axs[-1, -1].axis('off')
-        # plt.savefig("../wordcloud.png")
-        # plt.show()
 
 
 if __name__ == '__main__':
