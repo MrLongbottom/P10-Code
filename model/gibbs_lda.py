@@ -13,21 +13,21 @@ def random_initialize(documents):
     :return: word_topic_assignment,
     """
     print("Random Initilization")
-    document_topic = np.zeros([N, num_topics]) + alpha
+    doc_topic = np.zeros([N, num_topics]) + alpha
     topic_word = np.zeros([num_topics, M]) + beta
-    topic_c = np.zeros([num_topics]) + M * beta
-    wt_assignment = []
+    topic_count = np.zeros([num_topics]) + M * beta
+    word_topic_assignment = []
     for d, doc in tqdm(enumerate(documents)):
         curr_doc = []
         for w in doc:
-            pz = np.divide(np.multiply(document_topic[d, :], topic_word[:, w]), topic_c)
+            pz = np.divide(np.multiply(doc_topic[d, :], topic_word[:, w]), topic_count)
             z = np.random.multinomial(1, pz / pz.sum()).argmax()
             curr_doc.append(z)
-            document_topic[d, z] += 1
+            doc_topic[d, z] += 1
             topic_word[z, w] += 1
-            topic_c[z] += 1
-        wt_assignment.append(curr_doc)
-    return wt_assignment, document_topic, topic_word, topic_c
+            topic_count[z] += 1
+        word_topic_assignment.append(curr_doc)
+    return word_topic_assignment, doc_topic, topic_word, topic_count
 
 
 def gibbs_sampling(documents: List[np.ndarray],
