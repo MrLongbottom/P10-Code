@@ -6,8 +6,9 @@ from typing import List
 import numpy as np
 from tqdm import tqdm
 
+import utility
 from utility import coherence, mean_topic_diff
-from preprocess.preprocessing import prepro_file_load
+from preprocess.preprocessing import prepro_file_load, load_memmap_matrix
 
 
 def random_initialize(documents):
@@ -122,11 +123,11 @@ if __name__ == '__main__':
     iterationNum = 50
     num_topics = 10
     num_categories = 37
-    with open("../preprocess/generated_files/doc_word_matrix.pickle", 'rb') as file:
-        doc_word_matrix = pickle.load(file)
     with open("../preprocess/generated_files/corpora", 'rb') as file:
         corpora = pickle.load(file)
-    doc_word_matrix = np.array(doc_word_matrix.to_dense(), dtype=int)
+    paths = utility.load_dict_file("../paths.csv")
+    shape = (corpora.num_docs, len(corpora))
+    doc_word_matrix = load_memmap_matrix('../' + paths["doc_word_matrix"])
     N = doc_word_matrix.shape[0]
     M = doc_word_matrix.shape[1]
     doc2category = prepro_file_load("doc2category")
@@ -136,7 +137,7 @@ if __name__ == '__main__':
 
     # things needed to calculate coherence
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
-        prepro_file_load('id2pre_text').values())
+        prepro_file_load('doc2pre_text').values())
 
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
