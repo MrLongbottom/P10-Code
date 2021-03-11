@@ -6,7 +6,8 @@ import numpy as np
 from tqdm import tqdm
 
 from preprocess.preprocessing import prepro_file_load
-import coherence
+from utility import coherence
+
 
 def random_initialize(documents: List[np.ndarray]):
     """
@@ -131,5 +132,6 @@ if __name__ == '__main__':
     word_topic_assignment, document_topic_dist, topic_word_dist, topic_count = random_initialize(doc_word_matrix)
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(doc_word_matrix, document_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix), " Coherence: ", get_coherence(doc2bow, dictionary, texts))
+        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplexity(doc_word_matrix),
+              " Coherence: ", get_coherence(doc2bow, dictionary, texts))
     print(get_topics(10))

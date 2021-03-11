@@ -6,8 +6,8 @@ from typing import List
 import numpy as np
 from tqdm import tqdm
 
+from utility import coherence, mean_topic_diff
 from preprocess.preprocessing import prepro_file_load
-import coherence
 
 
 def random_initialize(documents):
@@ -57,7 +57,7 @@ def gibbs_sampling(documents: List[np.ndarray],
 
             # Sample a new topic based on cat_topic and topic word
             # and assign it to the word we are working with
-            #np.multiply(np.divide(cat_topic[c_index,:], topic_count)
+            # np.multiply(np.divide(cat_topic[c_index,:], topic_count)
             pz = np.divide(np.multiply(cat_topic[c_index, :], topic_word[:, word]), topic_count)
             topic = np.random.multinomial(1, pz / pz.sum()).argmax()
             word_topic_assignment[d_index][w_index] = topic
@@ -113,7 +113,7 @@ def get_topics(num_of_word_per_topic: int = 10):
 
 
 def get_coherence(doc2bow, dictionary, texts):
-    return coherence.coherence(topics=get_topics(), doc2bow=doc2bow, dictionary=dictionary, texts=texts)
+    return coherence(topics=get_topics(), doc2bow=doc2bow, dictionary=dictionary, texts=texts)
 
 
 if __name__ == '__main__':
@@ -135,12 +135,13 @@ if __name__ == '__main__':
     word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(train_docs)
 
     # things needed to calculate coherence
-    doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(prepro_file_load('id2pre_text').values())
+    doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
+        prepro_file_load('id2pre_text').values())
 
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
               " Perplexity: ", perplexity(test_docs),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts),
-              " Topic Diff: ", coherence.mean_topic_diff(topic_word_dist))
+              " Topic Diff: ", mean_topic_diff(topic_word_dist))
     print(get_topics(10))
