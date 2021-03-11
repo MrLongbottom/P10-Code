@@ -15,7 +15,7 @@ def load_dict_file(filepath, separator='@'):
             if value[:2] == "['":
                 value = value[2:-2].split("', '")
             # check if value is number
-            elif value.isnumeric():
+            elif value.isnumeric() and value != "½":
                 value = int(value)
             dictionary[key] = value
     return dictionary
