@@ -102,8 +102,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
 def update_path(path, folder_name):
     if folder_name == "":
         return path
-    paths = utility.load_dict_file("../paths.csv")
-    path = paths['doc2pre_text'].split('/')
+    path = path.split('/')
     path.insert(len(path) - 1, folder_name)
     path = "/".join(path)
     return path
