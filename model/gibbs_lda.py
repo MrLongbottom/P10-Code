@@ -5,11 +5,9 @@ from typing import List
 import numpy as np
 from tqdm import tqdm
 
-
 import utility
 from preprocess.preprocessing import load_memmap_matrix, prepro_file_load
 from utility import coherence
-
 
 
 def random_initialize(documents: List[np.ndarray]):
@@ -111,7 +109,7 @@ def get_topics(num_of_word_per_topic: int = 10):
 
 
 def get_coherence(doc2bow, dictionary, texts):
-    return coherence.coherence(topics=get_topics(), doc2bow=doc2bow, dictionary=dictionary, texts=texts)
+    return coherence(topics=get_topics(), doc2bow=doc2bow, dictionary=dictionary, texts=texts)
 
 
 if __name__ == '__main__':
@@ -130,7 +128,7 @@ if __name__ == '__main__':
 
     # things needed to calculate coherence
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
-        prepro_file_load('id2pre_text').values())
+        prepro_file_load('doc2pre_text').values())
 
     word_topic_assignment, document_topic_dist, topic_word_dist, topic_count = random_initialize(doc_word_matrix)
     for i in tqdm(range(0, iterationNum)):
