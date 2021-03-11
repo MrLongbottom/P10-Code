@@ -6,7 +6,6 @@ import itertools
 import torch.sparse
 import pickle
 
-
 def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     paths = utility.load_dict_file("../paths.csv")
 
@@ -20,31 +19,18 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     new_texts = {v: k for k, v in rev.items()}
     bad_ids = [x for x in texts.keys() if x not in new_texts.keys()]
     id2doc_file = {num_id: name_id for num_id, name_id in enumerate(new_texts.keys())}
-
-    # remove duplicates
-    categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
-    authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
-    taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
-
-    # make value -> id mappings
-    cat2id = {v: i for v, i in zip(list(set(categories.values())), range(len(set(categories.values()))))}
-    auth2id = {v: i for v, i in zip(list(set(authors.values())), range(len(set(authors.values()))))}
-    tax2id = {v: i for v, i in zip(list(set(taxonomies.values())), range(len(set(taxonomies.values()))))}
-
-    # make doc_id -> meta_id mappings
-    categories = {i: cat2id[v] for v, i in zip(categories.values(), range(len(categories)))}
-    authors = {i: auth2id[v] for v, i in zip(authors.values(), range(len(authors)))}
-    taxonomies = {i: tax2id[v] for v, i in zip(taxonomies.values(), range(len(taxonomies)))}
-
     texts = {e: v.replace('\n', '') for e, (k, v) in enumerate(texts.items()) if k not in bad_ids}
+
+    cat2id, categories, auth2id, authors, tax2id, taxonomies = construct_metadata([categories, authors, taxonomies], bad_ids)
+
     if save:
         if printouts:
             print("Saving data mapping files")
         utility.save_dict_file('../' + update_path(paths['id2doc'], folder_name), id2doc_file)
         utility.save_dict_file('../' + update_path(paths['doc2raw_text'], folder_name), texts)
-        utility.save_dict_file('../' + update_path(paths['id2category'], folder_name), {v: k for k, v in cat2id.items()})
-        utility.save_dict_file('../' + update_path(paths['id2author'], folder_name), {v: k for k, v in auth2id.items()})
-        utility.save_dict_file('../' + update_path(paths['id2taxonomy'], folder_name), {v: k for k, v in tax2id.items()})
+        utility.save_dict_file('../' + update_path(paths['id2category'], folder_name), cat2id)
+        utility.save_dict_file('../' + update_path(paths['id2author'], folder_name), auth2id)
+        utility.save_dict_file('../' + update_path(paths['id2taxonomy'], folder_name), tax2id)
         utility.save_dict_file('../' + update_path(paths['doc2category'], folder_name), categories)
         utility.save_dict_file('../' + update_path(paths['doc2author'], folder_name), authors)
         utility.save_dict_file('../' + update_path(paths['doc2taxonomy'], folder_name), taxonomies)
@@ -97,6 +83,50 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     if printouts:
         print('Preprocessing Finished.')
     return corpora, documents, doc2bow, doc_word_matrix
+
+
+def construct_metadata(meta, bad_ids):
+    categories, authors, taxonomies = meta
+    # remove duplicates
+    categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
+    authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
+    taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
+
+    # Filter meta data mappings:
+    distribution = {}
+    for v in categories.values():
+        distribution[v] = distribution.get(v, 0) + 1
+    bad_cat = [k for k, v in distribution.items() if v < 140]
+    categories = {k: v if v not in bad_cat else 'misc' for k, v in categories.items()}
+
+    #distribution = {}
+    #for v in authors.values():
+    #    distribution[v] = distribution.get(v, 0) + 1
+    #bad_cat = [k for k, v in distribution.items() if v < 140]
+    #authors = {k: v if v not in bad_cat else 'misc' for k, v in authors.items()}
+
+    # TODO taxonomy needs to be reworked into smaller parts, when we want to work with it.
+    #distribution = {}
+    #for v in taxonomies.values():
+    #    distribution[v] = distribution.get(v, 0) + 1
+    #bad_cat = [k for k, v in distribution.items() if v < 140]
+    #taxonomies = {k: v if v not in bad_cat else 'misc' for k, v in taxonomies.items()}
+
+    # make value -> id mappings
+    cat2id = {v: i for v, i in zip(list(set(categories.values())), range(len(set(categories.values()))))}
+    auth2id = {v: i for v, i in zip(list(set(authors.values())), range(len(set(authors.values()))))}
+    tax2id = {v: i for v, i in zip(list(set(taxonomies.values())), range(len(set(taxonomies.values()))))}
+
+    # make doc_id -> meta_id mappings
+    categories = {i: cat2id[v] for v, i in zip(categories.values(), range(len(categories)))}
+    authors = {i: auth2id[v] for v, i in zip(authors.values(), range(len(authors)))}
+    taxonomies = {i: tax2id[v] for v, i in zip(taxonomies.values(), range(len(taxonomies)))}
+
+    cat2id = {v: k for k, v in cat2id.items()}
+    auth2id = {v: k for k, v in auth2id.items()}
+    tax2id = {v: k for k, v in tax2id.items()}
+
+    return cat2id, categories, auth2id, authors, tax2id, taxonomies
 
 
 def update_path(path, folder_name):
