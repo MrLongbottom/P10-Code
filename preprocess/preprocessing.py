@@ -16,7 +16,6 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
         print("Loading dataset")
     texts, categories, authors, taxonomies = load_document_file('../' + paths[json_file])
 
-
     # removing duplicates from dictionaries
     rev = {v: k for k, v in texts.items()}
     new_texts = {v: k for k, v in rev.items()}
@@ -44,9 +43,11 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
             print("Saving data mapping files")
         utility.save_dict_file('../' + update_path(paths['id2doc'], folder_name), id2doc_file)
         utility.save_dict_file('../' + update_path(paths['doc2raw_text'], folder_name), texts)
-        utility.save_dict_file('../' + update_path(paths['id2category'], folder_name), {v: k for k, v in cat2id.items()})
+        utility.save_dict_file('../' + update_path(paths['id2category'], folder_name),
+                               {v: k for k, v in cat2id.items()})
         utility.save_dict_file('../' + update_path(paths['id2author'], folder_name), {v: k for k, v in auth2id.items()})
-        utility.save_dict_file('../' + update_path(paths['id2taxonomy'], folder_name), {v: k for k, v in tax2id.items()})
+        utility.save_dict_file('../' + update_path(paths['id2taxonomy'], folder_name),
+                               {v: k for k, v in tax2id.items()})
         utility.save_dict_file('../' + update_path(paths['doc2category'], folder_name), categories)
         utility.save_dict_file('../' + update_path(paths['doc2author'], folder_name), authors)
         utility.save_dict_file('../' + update_path(paths['doc2taxonomy'], folder_name), taxonomies)
@@ -93,13 +94,12 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
         # with open('../' + paths['doc_word_matrix'], "wb") as file:
         #     pickle.dump(doc_word_matrix, file)
         utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
-        utility.save_dict_file('../' + paths['id2pre_text'], documents)
-        utility.save_dict_file('../' + paths['doc2word_ids'], doc2id)
+        utility.save_dict_file('../' + paths['doc2pre_text'], documents)
+        utility.save_dict_file('../' + paths['doc2word'], doc2id)
 
     if printouts:
         print('Preprocessing Finished.')
     return corpora, documents, doc2bow, mm_doc_word_matrix
-
 
 
 def make_doc2bow(corpora, documents):
@@ -108,7 +108,7 @@ def make_doc2bow(corpora, documents):
         doc2bow.append(corpora.doc2bow(doc))
     return doc2bow
 
-  
+
 def update_path(path, folder_name):
     if folder_name == "":
         return path
@@ -185,5 +185,5 @@ def prepro_file_load(file_name, folder_name=None):
 
 
 if __name__ == '__main__':
-    info = preprocessing(json_file='full_json', printouts=True, save=True, folder_name='test')
+    info = preprocessing(json_file='2017_json', printouts=True, save=True)
     print('Finished Preprocessing')

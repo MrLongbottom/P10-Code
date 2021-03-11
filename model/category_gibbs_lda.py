@@ -122,7 +122,8 @@ if __name__ == '__main__':
     beta = 0.1
     iterationNum = 50
     num_topics = 10
-    num_categories = 37
+    doc2category = prepro_file_load("doc2category")
+    num_categories = len(set(doc2category.values()))
     with open("../preprocess/generated_files/corpora", 'rb') as file:
         corpora = pickle.load(file)
     paths = utility.load_dict_file("../paths.csv")
@@ -130,7 +131,7 @@ if __name__ == '__main__':
     doc_word_matrix = load_memmap_matrix('../' + paths["doc_word_matrix"])
     N = doc_word_matrix.shape[0]
     M = doc_word_matrix.shape[1]
-    doc2category = prepro_file_load("doc2category")
+
     documents = [np.nonzero(x)[0] for x in doc_word_matrix]
     train_docs, test_docs = train_test_split(documents, test_size=0.33, shuffle=True)
     word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(train_docs)
