@@ -21,9 +21,9 @@ from preprocess.preprocessing import prepro_file_load
 logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.INFO)
 
 
-class Encoder(nn.Module):
+class CategoryEncoder(nn.Module):
     # Base class for the encoder net, used in the guide
-    def __init__(self, vocab_size, num_topics, hidden, dropout):
+    def __init__(self, vocab_size, num_topics, num_categories, hidden, dropout):
         super().__init__()
         self.drop = nn.Dropout(dropout)  # to avoid component collapse
         self.fc1 = nn.Linear(vocab_size, hidden)
@@ -44,9 +44,9 @@ class Encoder(nn.Module):
         return theta_loc, theta_scale
 
 
-class Decoder(nn.Module):
+class CategoryDecoder(nn.Module):
     # Base class for the decoder net, used in the model
-    def __init__(self, vocab_size, num_topics, dropout):
+    def __init__(self, vocab_size, num_topics, num_categories, dropout):
         super().__init__()
         self.beta = nn.Linear(num_topics, vocab_size)
         self.bn = nn.BatchNorm1d(vocab_size)
@@ -58,15 +58,16 @@ class Decoder(nn.Module):
         return F.softmax(self.bn(self.beta(inputs)), dim=1)
 
 
-class ProdLDA(nn.Module):
-    def __init__(self, vocab_size, num_topics, hidden, dropout):
+class CategoryProdLDA(nn.Module):
+    def __init__(self, vocab_size, num_topics, num_categories, hidden, dropout):
         super().__init__()
         self.vocab_size = vocab_size
         self.num_topics = num_topics
-        self.encoder = Encoder(vocab_size, num_topics, hidden, dropout)
-        self.decoder = Decoder(vocab_size, num_topics, dropout)
+        self.num_categories = num_categories
+        self.encoder = CategoryEncoder(vocab_size, num_topics, num_categories, hidden, dropout)
+        self.decoder = CategoryDecoder(vocab_size, num_topics, num_categories, dropout)
 
-    def model(self, docs=None):
+    def model(self, docs=None, doc_categories=None):
         pyro.module("decoder", self.decoder)
         with pyro.plate("documents", docs.shape[0]):
             # Dirichlet prior  𝑝(𝜃|𝛼) is replaced by a log-normal distribution
@@ -85,7 +86,7 @@ class ProdLDA(nn.Module):
                 obs=docs
             )
 
-    def guide(self, docs=None):
+    def guide(self, docs=None, doc_categories=None):
         pyro.module("encoder", self.encoder)
         with pyro.plate("documents", docs.shape[0]):
             # Dirichlet prior  𝑝(𝜃|𝛼) is replaced by a log-normal distribution,
@@ -116,19 +117,21 @@ def plot_word_cloud(b, ax, vocab, n):
 def main():
     assert pyro.__version__.startswith('1.6.0')
     # Enable smoke test to test functionality
-    smoke_test = False
+    smoke_test = True
 
     logging.info(f"CUDA available: {torch.cuda.is_available()}")
 
     logging.info("Loading data...")
     # News dataset for testing
-    news = fetch_20newsgroups(subset='all')
-    vectorizer = CountVectorizer(max_df=0.5, min_df=20)
-    docs = torch.from_numpy(vectorizer.fit_transform(news['data']).toarray())
+    # news = fetch_20newsgroups(subset='all')
+    # vectorizer = CountVectorizer(max_df=0.5, min_df=20)
+    # docs = torch.from_numpy(vectorizer.fit_transform(news['data']).toarray())
 
     # Loading data
     docs = prepro_file_load("doc_word_matrix").to_dense()
+    doc_categories = torch.t(torch.reshape(torch.Tensor(list(prepro_file_load("doc2category").values())), (1, -1)))
     id2word = prepro_file_load("id2word")
+    id2cat = prepro_file_load("id2category")
 
     vocab = pd.DataFrame(columns=['index', 'word'])
     vocab['index'] = list(id2word.keys())
@@ -144,8 +147,9 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     docs = docs.float()
-    num_categories = 0
-    num_topics = 30 if not smoke_test else 3
+    doc_categories = doc_categories.float()
+    num_categories = len(id2cat)
+    num_topics = num_categories * 2 if not smoke_test else 3
     batch_size = 32
     learning_rate = 1e-3
     num_epochs = 50 if not smoke_test else 1
@@ -153,9 +157,10 @@ def main():
     # Training
     pyro.clear_param_store()
 
-    prodLDA = ProdLDA(
+    prodLDA = CategoryProdLDA(
         vocab_size=docs.shape[1],
         num_topics=num_topics,
+        num_categories=num_categories,
         hidden=100 if not smoke_test else 10,
         dropout=0.2
     )
@@ -173,7 +178,8 @@ def main():
         running_loss = 0.0
         for i in range(num_batches):
             batch_docs = docs[i * batch_size:(i + 1) * batch_size, :].to(device)
-            loss = svi.step(batch_docs)
+            batch_cats = doc_categories[i * batch_size:(i + 1) * batch_size, :].to(device)
+            loss = svi.step(batch_docs, batch_cats)
             running_loss += loss / batch_docs.size(0)
 
         losses.append(running_loss)
@@ -188,7 +194,7 @@ def main():
         plt.title("ELBO")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
-        plot_file_name = "../ProdLDA-loss-2017_categories-" + str(num_categories) + \
+        plot_file_name = "../ProdCategoryLDA-loss-2017_categories-" + str(num_categories) + \
                          "_topics-" + str(num_topics) + \
                          "_batch-" + str(batch_size) + \
                          "_lr-" + str(learning_rate) + \
