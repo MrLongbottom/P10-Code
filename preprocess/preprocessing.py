@@ -76,9 +76,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
         doc2id.append([x for x in doc_id if x != -1])
     documents = doc2
 
-    doc2bow = []
-    for doc in documents:
-        doc2bow.append(corpora.doc2bow(doc))
+    doc2bow = make_doc2bow(corpora, documents)
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
 
@@ -99,6 +97,14 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     return corpora, documents, doc2bow, doc_word_matrix
 
 
+
+def make_doc2bow(corpora, documents):
+    doc2bow = []
+    for doc in documents:
+        doc2bow.append(corpora.doc2bow(doc))
+    return doc2bow
+
+  
 def update_path(path, folder_name):
     if folder_name == "":
         return path
