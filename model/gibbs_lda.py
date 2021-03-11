@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 
 
-def random_initialize(documents):
+def random_initialize(documents: List[np.ndarray]):
     """
     Randomly initialisation of the word topics
     :param documents: a list of documents with their word ids
