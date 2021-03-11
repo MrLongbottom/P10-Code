@@ -45,17 +45,17 @@ def gibbs_sampling(documents: List[np.ndarray],
     :param word_topic_assignment: A list of documents where each index is the given words topic
     :param topic_count: the number of the times each topic is used
     :param documents: a list of documents with their word ids
-    :param cat_topic: a matrix describing the number of times each topic within each document
+    :param cat_topic: a matrix describing the number of times each topic within each category
     :param topic_word: a matrix describing the number of times each word within each topic
     """
     for d_index, doc in enumerate(documents):
+        c_index = doc2category[d_index]
         for w_index, word in enumerate(doc):
             # Find the topic for the given word a decrease the topic count
             topic = word_topic_assignment[d_index][w_index]
-            c_index = doc2category[d_index]
             decrease_count(topic, topic_word, cat_topic, c_index, word, topic_count)
 
-            # Sample a new topic based on doc_topic and topic word
+            # Sample a new topic based on cat_topic and topic word
             # and assign it to the word we are working with
             #np.multiply(np.divide(cat_topic[c_index,:], topic_count)
             pz = np.divide(np.multiply(cat_topic[c_index, :], topic_word[:, word]), topic_count)
