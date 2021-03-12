@@ -1,20 +1,18 @@
-import os
 import logging
+import math
 
 import pyro
 import pyro.distributions as dist
 import torch
-import pandas as pd
-import numpy as np
-from sklearn.datasets import fetch_20newsgroups
-from sklearn.feature_extraction.text import CountVectorizer
-import math
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
 from pyro.infer import SVI, TraceMeanField_ELBO
 from tqdm import trange
 from wordcloud import WordCloud
-import matplotlib.pyplot as plt
 
 from preprocess.preprocessing import prepro_file_load
 
@@ -23,7 +21,7 @@ logging.basicConfig(format='%(relativeCreated) 9d %(message)s', level=logging.IN
 
 class CategoryEncoder(nn.Module):
     # Base class for the encoder net, used in the guide
-    def __init__(self, vocab_size, num_topics, num_categories, hidden, dropout):
+    def __init__(self, num_topics, num_categories, hidden, dropout):
         super().__init__()
         self.drop = nn.Dropout(dropout)  # to avoid component collapse
         self.fc1 = nn.Linear(1, hidden)  # TODO maybe input is better as one hot vector
@@ -46,7 +44,7 @@ class CategoryEncoder(nn.Module):
 
 class CategoryDecoder(nn.Module):
     # Base class for the decoder net, used in the model
-    def __init__(self, vocab_size, num_topics, num_categories, dropout):
+    def __init__(self, vocab_size, num_topics, dropout):
         super().__init__()
         self.beta = nn.Linear(num_topics, vocab_size)
         self.bn = nn.BatchNorm1d(vocab_size)
@@ -64,12 +62,13 @@ class CategoryProdLDA(nn.Module):
         self.vocab_size = vocab_size
         self.num_topics = num_topics
         self.num_categories = num_categories
-        self.encoder = CategoryEncoder(vocab_size, num_topics, num_categories, hidden, dropout)
-        self.decoder = CategoryDecoder(vocab_size, num_topics, num_categories, dropout)
+        self.encoder = CategoryEncoder(num_topics, num_categories, hidden, dropout)
+        self.decoder = CategoryDecoder(vocab_size, num_topics, dropout)
 
     def model(self, docs=None, doc_categories=None):
         pyro.module("decoder", self.decoder)
-        with pyro.plate("documents", docs.shape[0]):
+
+        with pyro.plate("document_categories", doc_categories.shape[0]):
             # Dirichlet prior  𝑝(𝜃|𝛼) is replaced by a log-normal distribution
             theta_loc = docs.new_zeros((docs.shape[0], self.num_topics))
             theta_scale = docs.new_ones((docs.shape[0], self.num_topics))
@@ -80,6 +79,8 @@ class CategoryProdLDA(nn.Module):
             # conditional distribution of 𝑤𝑛 is defined as
             # 𝑤𝑛|𝛽,𝜃 ~ Categorical(𝜎(𝛽𝜃))
             count_param = self.decoder(theta)
+
+        with pyro.plate("documents", docs.shape[0]):
             pyro.sample(
                 'obs',
                 dist.Multinomial(docs.shape[1], count_param).to_event(1),
@@ -103,7 +104,7 @@ class CategoryProdLDA(nn.Module):
 def main():
     assert pyro.__version__.startswith('1.6.0')
     # Enable smoke test to test functionality
-    smoke_test = True
+    smoke_test = False
 
     logging.info(f"CUDA available: {torch.cuda.is_available()}")
 
@@ -138,7 +139,7 @@ def main():
     num_topics = num_categories * 2 if not smoke_test else 3
     batch_size = 32
     learning_rate = 1e-3
-    num_epochs = 10 if not smoke_test else 1
+    num_epochs = 50 if not smoke_test else 1
 
     # Training
     pyro.clear_param_store()

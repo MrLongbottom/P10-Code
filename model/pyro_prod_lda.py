@@ -1,20 +1,18 @@
-import os
 import logging
+import math
 
 import pyro
 import pyro.distributions as dist
 import torch
-import pandas as pd
-import numpy as np
-from sklearn.datasets import fetch_20newsgroups
-from sklearn.feature_extraction.text import CountVectorizer
-import math
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
 from pyro.infer import SVI, TraceMeanField_ELBO
 from tqdm import trange
 from wordcloud import WordCloud
-import matplotlib.pyplot as plt
 
 from preprocess.preprocessing import prepro_file_load
 
@@ -122,9 +120,9 @@ def main():
 
     logging.info("Loading data...")
     # News dataset for testing
-    news = fetch_20newsgroups(subset='all')
-    vectorizer = CountVectorizer(max_df=0.5, min_df=20)
-    docs = torch.from_numpy(vectorizer.fit_transform(news['data']).toarray())
+    # news = fetch_20newsgroups(subset='all')
+    # vectorizer = CountVectorizer(max_df=0.5, min_df=20)
+    # docs = torch.from_numpy(vectorizer.fit_transform(news['data']).toarray())
 
     # Loading data
     docs = prepro_file_load("doc_word_matrix").to_dense()
