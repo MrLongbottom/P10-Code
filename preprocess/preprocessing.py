@@ -63,9 +63,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
         doc2id.append([x for x in doc_id if x != -1])
     documents = doc2
 
-    doc2bow = []
-    for doc in documents:
-        doc2bow.append(corpora.doc2bow(doc))
+    doc2bow = make_doc2bow(corpora, documents)
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
 
@@ -128,6 +126,13 @@ def construct_metadata(meta, bad_ids):
     tax2id = {v: k for k, v in tax2id.items()}
 
     return cat2id, categories, auth2id, authors, tax2id, taxonomies
+
+
+def make_doc2bow(corpora, documents):
+    doc2bow = []
+    for doc in documents:
+        doc2bow.append(corpora.doc2bow(doc))
+    return doc2bow
 
 
 def update_path(path, folder_name):
