@@ -6,6 +6,7 @@ import itertools
 import torch.sparse
 import pickle
 
+
 def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     paths = utility.load_dict_file("../paths.csv")
 
@@ -99,11 +100,11 @@ def construct_metadata(meta, bad_ids):
     bad_cat = [k for k, v in distribution.items() if v < 140]
     categories = {k: v if v not in bad_cat else 'misc' for k, v in categories.items()}
 
-    #distribution = {}
-    #for v in authors.values():
-    #    distribution[v] = distribution.get(v, 0) + 1
-    #bad_cat = [k for k, v in distribution.items() if v < 140]
-    #authors = {k: v if v not in bad_cat else 'misc' for k, v in authors.items()}
+    distribution = {}
+    for v in authors.values():
+        distribution[v] = distribution.get(v, 0) + 1
+    bad_cat = [k for k, v in distribution.items() if v < 14]
+    authors = {k: v if v not in bad_cat else 'misc' for k, v in authors.items()}
 
     # TODO taxonomy needs to be reworked into smaller parts, when we want to work with it.
     #distribution = {}
@@ -190,5 +191,5 @@ def prepro_file_load(file_name, folder_name=None):
 
 
 if __name__ == '__main__':
-    info = preprocessing(json_file='full_json', printouts=True, save=True, folder_name='test')
+    info = preprocessing(json_file='2017_json', printouts=True, save=True, folder_name='test')
     print('Finished Preprocessing')
