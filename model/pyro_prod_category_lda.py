@@ -24,7 +24,7 @@ class CategoryEncoder(nn.Module):
     def __init__(self, num_topics, num_categories, hidden, dropout):
         super().__init__()
         self.drop = nn.Dropout(dropout)  # to avoid component collapse
-        self.fc1 = nn.Linear(1, hidden)  # TODO maybe input is better as one hot vector
+        self.fc1 = nn.Linear(num_categories, hidden)
         self.fc2 = nn.Linear(hidden, hidden)
         self.fcmu = nn.Linear(hidden, num_topics)
         self.fclv = nn.Linear(hidden, num_topics)
@@ -116,7 +116,8 @@ def main():
 
     # Loading data
     docs = prepro_file_load("doc_word_matrix").to_dense()
-    doc_categories = torch.t(torch.reshape(torch.Tensor(list(prepro_file_load("doc2category").values())), (1, -1)))
+    doc_categories = prepro_file_load("doc_cat_one_hot_matrix")
+    # doc_categories = torch.t(torch.reshape(torch.Tensor(list(prepro_file_load("doc2category").values())), (1, -1)))
     id2word = prepro_file_load("id2word")
     id2cat = prepro_file_load("id2category")
 
@@ -124,7 +125,7 @@ def main():
     vocab['index'] = list(id2word.keys())
     vocab['word'] = list(id2word.values())
 
-    logging.info(f"Dictionary size: {len(vocab)}")
+    logging.info(f"Vocab dictionary size: {len(vocab)}")
     logging.info(f"Corpus size: {docs.shape}")
 
     # Setting global variables
