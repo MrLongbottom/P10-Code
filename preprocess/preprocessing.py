@@ -94,7 +94,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
         corpora.save('../' + paths['corpora'])
         with open('../' + update_path(paths['doc2bow'], folder_name), "wb") as file:
             pickle.dump(doc2bow, file)
-        with open('../' + paths['doc_word_matrix'], "wb") as file:
+        with open('../' + paths['doc_word_matrix_sparse'], "wb") as file:
             pickle.dump(doc_word_matrix, file)
         utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
         utility.save_dict_file('../' + paths['doc2pre_text'], documents)
