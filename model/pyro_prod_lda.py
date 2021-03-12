@@ -24,6 +24,7 @@ class Encoder(nn.Module):
     def __init__(self, vocab_size, num_topics, hidden, dropout):
         super().__init__()
         self.drop = nn.Dropout(dropout)  # to avoid component collapse
+        # Setup the linear transformations
         self.fc1 = nn.Linear(vocab_size, hidden)
         self.fc2 = nn.Linear(hidden, hidden)
         self.fcmu = nn.Linear(hidden, num_topics)
@@ -32,10 +33,11 @@ class Encoder(nn.Module):
         self.bnlv = nn.BatchNorm1d(num_topics)  # to avoid component collapse
 
     def forward(self, inputs):
+        # Compute the hidden units
         h = F.softplus(self.fc1(inputs))
         h = F.softplus(self.fc2(h))
         h = self.drop(h)
-        # μ and Σ are the outputs
+        # Mean vector μ and covariance Σ are the outputs
         theta_loc = self.bnmu(self.fcmu(h))
         theta_scale = self.bnlv(self.fclv(h))
         theta_scale = (0.5 * theta_scale).exp()  # Enforces positivity
@@ -46,6 +48,7 @@ class Decoder(nn.Module):
     # Base class for the decoder net, used in the model
     def __init__(self, vocab_size, num_topics, dropout):
         super().__init__()
+        # Setup the linear transformation
         self.beta = nn.Linear(num_topics, vocab_size)
         self.bn = nn.BatchNorm1d(vocab_size)
         self.drop = nn.Dropout(dropout)
@@ -61,11 +64,14 @@ class ProdLDA(nn.Module):
         super().__init__()
         self.vocab_size = vocab_size
         self.num_topics = num_topics
+        # Create the encoder and decoder networks
         self.encoder = Encoder(vocab_size, num_topics, hidden, dropout)
         self.decoder = Decoder(vocab_size, num_topics, dropout)
 
     def model(self, docs=None):
+        # Register PyTorch module `decoder` with Pyro
         pyro.module("decoder", self.decoder)
+
         with pyro.plate("documents", docs.shape[0]):
             # Dirichlet prior  𝑝(𝜃|𝛼) is replaced by a log-normal distribution
             theta_loc = docs.new_zeros((docs.shape[0], self.num_topics))
@@ -84,7 +90,9 @@ class ProdLDA(nn.Module):
             )
 
     def guide(self, docs=None):
+        # Register PyTorch module `encoder` with Pyro
         pyro.module("encoder", self.encoder)
+
         with pyro.plate("documents", docs.shape[0]):
             # Dirichlet prior  𝑝(𝜃|𝛼) is replaced by a log-normal distribution,
             # where μ and Σ are the encoder network outputs
@@ -118,16 +126,12 @@ def main():
 
     logging.info(f"CUDA available: {torch.cuda.is_available()}")
 
-    logging.info("Loading data...")
-    # News dataset for testing
-    # news = fetch_20newsgroups(subset='all')
-    # vectorizer = CountVectorizer(max_df=0.5, min_df=20)
-    # docs = torch.from_numpy(vectorizer.fit_transform(news['data']).toarray())
-
     # Loading data
+    logging.info("Loading data...")
     docs = prepro_file_load("doc_word_matrix").to_dense()
     id2word = prepro_file_load("id2word")
 
+    # Put vocab into dataframe for exploration of data
     vocab = pd.DataFrame(columns=['index', 'word'])
     vocab['index'] = list(id2word.keys())
     vocab['word'] = list(id2word.values())
@@ -174,6 +178,7 @@ def main():
             loss = svi.step(batch_docs)
             running_loss += loss / batch_docs.size(0)
 
+        # Save and log losses
         losses.append(running_loss)
         bar.set_postfix(epoch_loss='{:.2e}'.format(running_loss))
         if epoch % 5 == 0:
@@ -201,7 +206,7 @@ def main():
             sorted_, indices = torch.sort(beta[n], descending=True)
             df = pd.DataFrame(indices[:10].numpy(), columns=['index'])
             words = pd.merge(df, vocab[['index', 'word']], how='left', on='index')['word'].values.tolist()
-            logging.info(f"Topic {n} sorted words: {words}")
+            logging.info(f"Topic {n}: {words}")
 
         # Word cloud plotting
         # beta = prodLDA.beta()
