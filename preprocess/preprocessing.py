@@ -83,6 +83,10 @@ def preprocessing(printouts=False, save=True):
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
 
+    doc_cat_one_hot = torch.zeros((len(documents), len(cat2id)))
+    for i, doc in enumerate(documents):
+        doc_cat_one_hot[i, categories.get(i)] = 1
+
     if save:
         if printouts:
             print("Saving Corpora & Preprocessed Text")
@@ -91,6 +95,8 @@ def preprocessing(printouts=False, save=True):
             pickle.dump(doc2bow, file)
         with open('../' + paths['doc_word_matrix'], "wb") as file:
             pickle.dump(doc_word_matrix, file)
+        with open('../' + paths['doc_cat_one_hot_matrix'], "wb") as file:
+            pickle.dump(doc_cat_one_hot, file)
         utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
         utility.save_dict_file('../' + paths['id2pre_text'], documents)
         utility.save_dict_file('../' + paths['doc2word_ids'], doc2id)
