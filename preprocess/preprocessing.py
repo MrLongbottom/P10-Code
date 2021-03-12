@@ -85,14 +85,17 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     shape = (corpora.num_docs, len(corpora))
     mm_doc_word_matrix = save_memmap_matrix("doc_word_matrix", doc2bow, shape)
 
+    # Sparse tensor format
+    doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
+
     if save:
         if printouts:
             print("Saving Corpora & Preprocessed Text")
         corpora.save('../' + paths['corpora'])
         with open('../' + update_path(paths['doc2bow'], folder_name), "wb") as file:
             pickle.dump(doc2bow, file)
-        # with open('../' + paths['doc_word_matrix'], "wb") as file:
-        #     pickle.dump(doc_word_matrix, file)
+        with open('../' + paths['doc_word_matrix'], "wb") as file:
+            pickle.dump(doc_word_matrix, file)
         utility.save_dict_file('../' + paths['id2word'], {v: k for k, v in corpora.token2id.items()})
         utility.save_dict_file('../' + paths['doc2pre_text'], documents)
         utility.save_dict_file('../' + paths['doc2word'], doc2id)

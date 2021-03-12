@@ -13,6 +13,7 @@ id2author@preprocess/generated_files/id2author.csv
 id2taxonomy@preprocess/generated_files/id2taxonomy.csv
 doc2bow@preprocess/generated_files/doc2bow.pickle
 doc_word_matrix@preprocess/generated_files/doc_word_matrix.dat
+doc_word_matrix_sparse@preprocess/generated_files/doc_word_matrix.pickle
 id2word@preprocess/generated_files/id2word.csv
 id2doc@preprocess/generated_files/id2doc.csv
 doc2word@preprocess/generated_files/doc2word.csv
