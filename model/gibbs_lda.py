@@ -73,11 +73,10 @@ if __name__ == '__main__':
         corpora = pickle.load(file)
     paths = utility.load_dict_file("../paths.csv")
     shape = (corpora.num_docs, len(corpora))
-    doc_word_matrix = load_memmap_matrix('../' + paths["doc_word_matrix"])
-    N = doc_word_matrix.shape[0]
-    M = doc_word_matrix.shape[1]
-    documents = [np.nonzero(x)[0] for x in doc_word_matrix]
-    train_docs, test_docs = train_test_split(documents, test_size=0.33, shuffle=True)
+    # TODO convert to iterator?
+    doc2word = list(prepro_file_load('doc2word', folder_name=None).values())
+    N, M = (corpora.num_docs, len(corpora))
+    train_docs, test_docs = train_test_split(doc2word, test_size=0.33, shuffle=True)
     # things needed to calculate coherence
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
         prepro_file_load('doc2pre_text').values())
