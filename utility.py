@@ -10,12 +10,16 @@ def load_dict_file(filepath, separator='@'):
         for line in file.readlines():
             kv = line.split(separator)
             value = kv[1].replace('\n', '')
-            key = int(kv[0]) if kv[0].isnumeric() else kv[0]
+            key = int(kv[0]) if kv[0].isdecimal() else kv[0]
             # check if value is list
             if value[:2] == "['":
                 value = value[2:-2].split("', '")
+                value = [int(x) if x.isdecimal() else x for x in value]
+            elif value[:1] == "[":
+                value = value[1:-1].split(", ")
+                value = [int(x) if x.isdecimal() else x for x in value]
             # check if value is number
-            elif value.isnumeric():
+            elif value.isdecimal():
                 value = int(value)
             dictionary[key] = value
     return dictionary
