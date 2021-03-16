@@ -92,6 +92,7 @@ def construct_metadata(meta, bad_ids):
     taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
 
     # Filter meta data mappings:
+    """
     distribution = {}
     for v in categories.values():
         distribution[v] = distribution.get(v, 0) + 1
@@ -110,6 +111,7 @@ def construct_metadata(meta, bad_ids):
     #    distribution[v] = distribution.get(v, 0) + 1
     #bad_cat = [k for k, v in distribution.items() if v < 140]
     #taxonomies = {k: v if v not in bad_cat else 'misc' for k, v in taxonomies.items()}
+    """
 
     # make value -> id mappings
     cat2id = {v: i for v, i in zip(list(set(categories.values())), range(len(set(categories.values()))))}
