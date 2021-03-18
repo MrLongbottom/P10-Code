@@ -28,7 +28,7 @@ def get_taxonomy(root: ET.Element):
     if len([x.attrib for x in root.find('.//{*}head') if "SAXo-Taxonomy" in x.attrib.values()]) == 0:
         return ""
     else:
-        return [x.attrib['content'] for x in root.find('.//{*}head') if 'SAXo-Taxonomy' in x.attrib.values()][0]
+        return "/".join([x.attrib['content'] for x in root.find('.//{*}head') if 'SAXo-Taxonomy' in x.attrib.values()])
 
 
 def get_headline(root: ET.Element):
