@@ -10,6 +10,7 @@ if __name__ == '__main__':
     for k, v in doc2meta.items():
         distribution[v] = distribution.get(v, 0) + 1
     distribution = {id2meta[k]: v for k, v in distribution.items()}
+    #distribution = {k: v for k, v in distribution.items() if v > 140}
     taxonomy = False
     if taxonomy:
         distribution2 = {}
@@ -26,7 +27,21 @@ if __name__ == '__main__':
     #n, bins, patches = ax1.hist(sizes, 1000, density=True, histtype='step',
     #                           cumulative=True, label='Empirical')
     # Boxplot
-    ax1.boxplot(sizes)
+    box = ax1.boxplot(sizes)
+    for line in box['medians']:
+        x, y = line.get_xydata()[0]
+        ax1.text(x - 0.06, y, '%.0f' % y, horizontalalignment='center', verticalalignment='center')
+    for line in box['boxes']:
+        x, y = line.get_xydata()[0]
+        ax1.text(x - 0.06, y, '%.0f' % y, horizontalalignment='center', verticalalignment='center')
+        x, y = line.get_xydata()[3]
+        ax1.text(x - 0.06, y, '%.0f' % y, horizontalalignment='center', verticalalignment='center')
+    for line in box['caps']:
+        x, y = line.get_xydata()[0]
+        ax1.text(x - 0.06, y, '%.0f' % y, horizontalalignment='center', verticalalignment='center')
+    for line in box['fliers']:
+        x, y = line.get_xydata()[0]
+        ax1.text(x - 0.06, y, '%.0f' % y, horizontalalignment='center', verticalalignment='center')
     # Pie Chart
     #ax1.pie(sizes, autopct='%1.1f', labels=names, startangle=90)
     #ax1.axis('equal')
