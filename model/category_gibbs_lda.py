@@ -6,7 +6,8 @@ from typing import List
 import numpy as np
 from tqdm import tqdm
 
-from utility import coherence, mean_topic_diff
+from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics, decrease_count, increase_count, \
+    cat_perplexity
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -21,7 +22,7 @@ def random_initialize(documents):
     topic_word = np.zeros([num_topics, M]) + beta
     topic_c = np.zeros([num_topics]) + M * beta
     wt_assignment = []
-    for d, doc in tqdm(list(enumerate(documents))):
+    for d, doc in tqdm(documents):
         curr_doc = []
         cat = doc2category[d]
         for w in doc:
@@ -48,7 +49,7 @@ def gibbs_sampling(documents: List[np.ndarray],
     :param cat_topic: a matrix describing the number of times each topic within each category
     :param topic_word: a matrix describing the number of times each word within each topic
     """
-    for d_index, doc in enumerate(documents):
+    for d_index, doc in documents:
         c_index = doc2category[d_index]
         for w_index, word in enumerate(doc):
             # Find the topic for the given word a decrease the topic count
@@ -66,82 +67,29 @@ def gibbs_sampling(documents: List[np.ndarray],
             increase_count(topic, topic_word, cat_topic, c_index, word, topic_count)
 
 
-def increase_count(topic, topic_word, doc_topic, d_index, word, t_count):
-    doc_topic[d_index, topic] += 1
-    topic_word[topic, word] += 1
-    t_count[topic] += 1
-
-
-def decrease_count(topic, topic_word, doc_topic, d_index, word, t_count):
-    doc_topic[d_index, topic] -= 1
-    topic_word[topic, word] -= 1
-    t_count[topic] -= 1
-
-
-def perplexity(documents: List[np.ndarray]) -> float:
-    """
-    Calculates the perplexity based on the documents given
-    :param documents: a list of documents with word ids
-    :return: the perplexity of the documents given
-    """
-    nd = np.sum(category_topic_dist, 1)
-    n = 0
-    ll = 0.0
-    for d, doc in enumerate(documents):
-        cat = doc2category[d]
-        for w in doc:
-            ll = ll + np.log(((topic_word_dist[:, w] / topic_count) * (category_topic_dist[cat, :] / nd[cat])).sum())
-            n = n + 1
-    return np.exp(ll / (-n))
-
-
-def get_topics(num_of_word_per_topic: int = 10):
-    """
-    Looks at the topic word distribution and sorts each topic based on the word count
-    :param num_of_word_per_topic: how many word is printed within each topic
-    :return: list of list of strings representing the words in each topic
-    """
-    topic_words = []
-    id2token = {v: k for k, v in corpora.token2id.items()}
-    for z in range(0, num_topics):
-        ids = topic_word_dist[z, :].argsort()
-        topic_word = []
-        for j in ids:
-            topic_word.insert(0, id2token[j])
-        topic_words.append(topic_word[0: min(num_of_word_per_topic, len(topic_word))])
-    return topic_words
-
-
-def get_coherence(doc2bow, dictionary, texts):
-    return coherence(topics=get_topics(), doc2bow=doc2bow, dictionary=dictionary, texts=texts)
-
-
 if __name__ == '__main__':
     alpha = 0.1
     beta = 0.1
     iterationNum = 50
     num_topics = 10
-    num_categories = 37
-    with open("../preprocess/generated_files/doc_word_matrix.pickle", 'rb') as file:
-        doc_word_matrix = pickle.load(file)
+    doc2category = prepro_file_load("doc2category")
+    num_categories = len(set(list(doc2category.values())))
     with open("../preprocess/generated_files/corpora", 'rb') as file:
         corpora = pickle.load(file)
-    doc_word_matrix = np.array(doc_word_matrix.to_dense(), dtype=int)
-    N = doc_word_matrix.shape[0]
-    M = doc_word_matrix.shape[1]
-    doc2category = prepro_file_load("doc2category")
-    documents = [np.nonzero(x)[0] for x in doc_word_matrix]
-    train_docs, test_docs = train_test_split(documents, test_size=0.33, shuffle=True)
-    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(train_docs)
+    doc2word = list(prepro_file_load("doc2word").items())
+    N, M = (corpora.num_docs, len(corpora))
+    train_docs, test_docs = train_test_split(doc2word, test_size=0.33, shuffle=True)
+
+    word_topic_assignment, category_topic_dist, topic_word_dist, topic_count = random_initialize(doc2word)
 
     # things needed to calculate coherence
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
-        prepro_file_load('id2pre_text').values())
+        prepro_file_load('doc2pre_text').values())
 
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
-              " Perplexity: ", perplexity(test_docs),
-              " Coherence: ", get_coherence(doc2bow, dictionary, texts),
+              " Perplexity: ", cat_perplexity(test_docs, category_topic_dist, topic_word_dist, topic_count),
+              " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist),
               " Topic Diff: ", mean_topic_diff(topic_word_dist))
-    print(get_topics(10))
+    print(get_topics(corpora, num_topics, topic_word_dist))
