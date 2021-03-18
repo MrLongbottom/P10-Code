@@ -68,16 +68,17 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
 
+    cat2id, categories, auth2id, authors, tax2id, taxonomies = construct_metadata([categories, authors, taxonomies],
+                                                                                  bad_ids)
+    
     doc_cat_one_hot = torch.zeros((len(documents), len(cat2id)))
     for i, doc in enumerate(documents):
         doc_cat_one_hot[i, categories.get(i)] = 1
 
-    cat2id, categories, auth2id, authors, tax2id, taxonomies = construct_metadata([categories, authors, taxonomies],
-                                                                                  bad_ids)
     if save:
         if printouts:
             print("Saving Corpora & Preprocessed Text")
-        corpora.save('../' + paths['corpora'])
+        corpora.save('../' + update_path(paths['corpora'], folder_name))
         with open('../' + update_path(paths['doc2bow'], folder_name), "wb") as file:
             pickle.dump(doc2bow, file)
         with open('../' + update_path(paths['doc_word_matrix'], folder_name), "wb") as file:
@@ -214,5 +215,5 @@ def prepro_file_load(file_name, folder_name=None):
 
 
 if __name__ == '__main__':
-    info = preprocessing(json_file='2017_json', printouts=True, save=True, folder_name='test')
+    info = preprocessing(json_file='2017_json', printouts=True, save=True, folder_name='2017')
     print('Finished Preprocessing')
