@@ -1,5 +1,6 @@
 import gensim
 from tqdm import tqdm
+
 import json
 import utility
 import itertools
@@ -67,6 +68,10 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
 
+    doc_cat_one_hot = torch.zeros((len(documents), len(cat2id)))
+    for i, doc in enumerate(documents):
+        doc_cat_one_hot[i, categories.get(i)] = 1
+
     cat2id, categories, auth2id, authors, tax2id, taxonomies = construct_metadata([categories, authors, taxonomies],
                                                                                   bad_ids)
     if save:
@@ -77,6 +82,8 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
             pickle.dump(doc2bow, file)
         with open('../' + update_path(paths['doc_word_matrix'], folder_name), "wb") as file:
             pickle.dump(doc_word_matrix, file)
+        with open('../' + paths['doc_cat_one_hot_matrix'], "wb") as file:
+            pickle.dump(doc_cat_one_hot, file)
         utility.save_dict_file('../' + update_path(paths['id2doc'], folder_name), id2doc_file)
         utility.save_dict_file('../' + update_path(paths['doc2raw_text'], folder_name), texts)
         utility.save_dict_file('../' + update_path(paths['id2category'], folder_name), cat2id)
@@ -93,7 +100,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
         print('Preprocessing Finished.')
     return corpora, documents, doc2bow, doc_word_matrix
 
-
+  
 def construct_metadata(meta, bad_ids):
     categories, authors, taxonomies = meta
 
@@ -171,6 +178,7 @@ def load_document_file(filename):
     categories = {}
     authors = {}
     taxonomies = {}
+
     with open(filename, "r", encoding='utf-8', errors='ignore') as json_file:
         for json_obj in json_file:
             try:
