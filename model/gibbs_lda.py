@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from gibbs_utility import increase_count, decrease_count, perplexity, get_coherence, get_topics
 from preprocess.preprocessing import prepro_file_load
+import matplotlib.pyplot as plt
 
 
 def random_initialize(documents: List[np.ndarray]):
@@ -64,7 +65,7 @@ def gibbs_sampling(documents: List[np.ndarray],
 if __name__ == '__main__':
     alpha = 0.1
     beta = 0.1
-    iterationNum = 50
+    iterationNum = 2
     num_topics = 10
     with open("../preprocess/generated_files/corpora", 'rb') as file:
         corpora = pickle.load(file)
@@ -78,9 +79,26 @@ if __name__ == '__main__':
         prepro_file_load('doc2pre_text').values())
 
     word_topic_assignment, document_topic_dist, topic_word_dist, topic_count = random_initialize(doc2word)
+    losses = []
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(train_docs, document_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ",
-              perplexity(test_docs, document_topic_dist, topic_word_dist, topic_count),
-              " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist))
+        perplex = perplexity(test_docs, document_topic_dist, topic_word_dist, topic_count)
+        coher = get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist)
+        losses.append(coher)
+        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplex, " Coherence: ", coher)
+
+    # Plot loss over epochs
+    plt.plot(losses)
+    plt.title("Standard Gibbs sampling")
+    plt.xlabel("Epoch")
+    plt.ylabel("Topic Coherence")
+    plot_file_name = "../gibbs_lda_full-" + \
+                     "_topics-" + str(num_topics) + \
+                     "_epochs-" + str(iterationNum) + \
+                     "_alpha-" + str(alpha) + \
+                     "_beta_" + str(beta) + \
+                     ".png"
+    plt.savefig(plot_file_name)
+    plt.show()
+
     print(get_topics(corpora, num_topics, topic_word_dist))

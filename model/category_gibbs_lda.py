@@ -9,6 +9,7 @@ from tqdm import tqdm
 from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics, decrease_count, increase_count, \
     cat_perplexity
 from preprocess.preprocessing import prepro_file_load
+import matplotlib.pyplot as plt
 
 
 def random_initialize(documents):
@@ -85,11 +86,26 @@ if __name__ == '__main__':
     # things needed to calculate coherence
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
         prepro_file_load('doc2pre_text').values())
-
+    losses = []
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, topic_count, word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed",
-              " Perplexity: ", cat_perplexity(test_docs, category_topic_dist, topic_word_dist, topic_count),
-              " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist),
-              " Topic Diff: ", mean_topic_diff(topic_word_dist))
+        perplex = cat_perplexity(test_docs, category_topic_dist, topic_word_dist, topic_count)
+        coher = get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist)
+        losses.append(coher)
+        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ", perplex, " Coherence: ", coher)
+
+    # Plot loss over epochs
+    plt.plot(losses)
+    plt.title("Standard Gibbs sampling")
+    plt.xlabel("Epoch")
+    plt.ylabel("Topic Coherence")
+    plot_file_name = "../gibbs_category_lda_full-" + \
+                     "_categories" + str(num_categories) + \
+                     "_topics-" + str(num_topics) + \
+                     "_epochs-" + str(iterationNum) + \
+                     "_alpha-" + str(alpha) + \
+                     "_beta_" + str(beta) + \
+                     ".png"
+    plt.savefig(plot_file_name)
+    plt.show()
     print(get_topics(corpora, num_topics, topic_word_dist))
