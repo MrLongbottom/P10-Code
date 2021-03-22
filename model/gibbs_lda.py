@@ -6,7 +6,8 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from gibbs_utility import increase_count, decrease_count, perplexity, get_coherence, get_topics
+from gibbs_utility import increase_count, decrease_count, perplexity, get_coherence, get_topics, \
+    _conditional_distribution
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -33,15 +34,6 @@ def random_initialize(documents: List[np.ndarray]):
     return word_topic_assignment, doc_topic, topic_word, word_topic_count, doc_topic_count
 
 
-def _conditional_distribution(d_index, word, topic_word, doc_topic, word_topic_count, doc_topic_count):
-    left = np.divide(topic_word[:, word], word_topic_count)
-    right = np.divide(doc_topic[d_index, :] / doc_topic_count[d_index])
-    p_z = np.multiply(left, right)
-    # normalize to obtain probabilities
-    p_z /= np.sum(p_z)
-    return p_z
-
-
 def gibbs_sampling(documents: List[np.ndarray],
                    doc_topic: np.ndarray,
                    topic_word: np.ndarray,
@@ -50,8 +42,9 @@ def gibbs_sampling(documents: List[np.ndarray],
                    word_topic_assignment: List[List[int]]):
     """
     Takes a set of documents and samples a new topic for each word within each document.
+    :param doc_topic_count:
+    :param word_topic_count:
     :param word_topic_assignment: A list of documents where each index is the given words topic
-    :param topic_count: the number of the times each topic is used
     :param documents: a list of documents with their word ids
     :param doc_topic: a matrix describing the number of times each topic within each document
     :param topic_word: a matrix describing the number of times each word within each topic
