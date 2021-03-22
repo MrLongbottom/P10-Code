@@ -47,7 +47,7 @@ def random_initialize(documents):
             currdoc.append((z1, z2))
             s2_topic[z2, w] += 1
         word_topic_assignment.append(currdoc)
-        middle_counts.append(sparse.csc_matrix(sp))
+        middle_counts.append(sparse.lil_matrix(sp))
     return word_topic_assignment, middle_counts, s2_topic
 
 
@@ -103,6 +103,7 @@ def gibbs_sampling(documents: List[np.ndarray],
             topic = wta[d_index][w_index]
             decrease_counts(topic, middle_counts, s2, word, d_index)
 
+            middle_counts[d_index].tocsr()
             sum_middle = middle_counts[d_index].sum(axis=1)
             dense = middle_counts[d_index].todense()
 
@@ -114,6 +115,7 @@ def gibbs_sampling(documents: List[np.ndarray],
             z = np.random.multinomial(1, np.asarray(pz.flatten()/pz.sum())[:, 0]).argmax()
             topic = (math.floor(z / 54), z % 54)
             word_topic_assignment[d_index][w_index] = topic
+            middle_counts[d_index].tolil()
 
             # And increase the topic count
             increase_counts(topic, middle_counts, s2, word, d_index)
@@ -168,6 +170,8 @@ if __name__ == '__main__':
     doc2bow, dictionary, texts = prepro_file_load('doc2bow', folder_name=folder), \
                                  prepro_file_load('corpora', folder_name=folder), \
                                  list(prepro_file_load('doc2pre_text', folder_name=folder).values())
+
+    print("Starting Gibbs")
 
     for i in range(0, iterationNum):
         gibbs_sampling(doc2word, word_topic_assignment, middle_counts, s2)
