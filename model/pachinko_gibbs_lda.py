@@ -47,17 +47,34 @@ def random_initialize(documents):
             currdoc.append((z1, z2))
             s2_topic[z2, w] += 1
         word_topic_assignment.append(currdoc)
-        middle_counts.append(sparse.coo_matrix(sp))
+        middle_counts.append(sparse.csc_matrix(sp))
     return word_topic_assignment, middle_counts, s2_topic
 
 
 def decrease_counts(assignment, middle_counts, s2, word, d):
-    middle_counts[d][assignment[0], assignment[1]] -= 1
+    """
+    rows = np.where(middle_counts[d].row == assignment[0])
+    cols = np.where(middle_counts[d].col == assignment[1])
+    id = np.intersect1d(rows, cols)[0]
+    middle_counts[d].data[id] -= 1
+    """
+    middle_counts[d][assignment] -= 1
     s2[assignment[1], word] -= 1
 
 
 def increase_counts(assignment, middle_counts, s2, word, d):
-    middle_counts[d][assignment[0], assignment[1]] += 1
+    """
+    rows = np.where(middle_counts[d].row == assignment[0])
+    cols = np.where(middle_counts[d].col == assignment[1])
+    if len(rows) > 0 and len(cols) > 1:
+        id = np.intersect1d(rows, cols)[0]
+        middle_counts[d].data[id] += 1
+    else:
+        np.append(middle_counts[d].data, 1)
+        np.append(middle_counts[d].row, assignment[0])
+        np.append(middle_counts[d].col, assignment[1])
+    """
+    middle_counts[d][assignment] += 1
     s2[assignment[1], word] += 1
 
 
@@ -77,27 +94,29 @@ def gibbs_sampling(documents: List[np.ndarray],
     # TODO alpha estimations
     # s0_alphas = np.divide(s0_topic, np.sum(s0_topic))
     # s1_alphas = np.divide(s0_topic, np.sum(s0_topic))
-
-    for d_index, doc in documents:
-        #tax = doc2tax[d_index]
+    # TODO add option based on observed tax
+    # tax = doc2tax[d_index]
+    for d_index, doc in tqdm(documents):
         for w_index, word in enumerate(doc):
+
             # Find the topic for the given word a decrease the topic count
             topic = wta[d_index][w_index]
             decrease_counts(topic, middle_counts, s2, word, d_index)
 
-            # TODO add option based on observed tax
-            div_1 = np.divide(middle_counts[d_index].sum(axis=0) + alpha, len(doc) + (s1_num * alpha))
-            div_2 = np.divide(s1_topic.T + alpha, s0_topic + (s2_num * alpha))
-            div_3 = np.divide(s2_topic[:, word] + alpha, s1_topic.sum(axis=0) + (M * beta))
+            sum_middle = middle_counts[d_index].sum(axis=1)
+            dense = middle_counts[d_index].todense()
 
-            pz = np.multiply(np.multiply(div_1, div_2).T, div_3)
+            div_1 = np.divide(sum_middle + alpha, len(doc) + (s1_num * alpha))
+            div_2 = np.divide(dense + alpha, sum_middle + (s2_num * alpha))
+            div_3 = np.divide(s2_topic[:, word] + alpha, s2_topic.sum(axis=1) + (M * beta))
 
-            z = np.random.multinomial(1, pz.flatten() / pz.sum()).argmax()
+            pz = np.multiply(np.multiply(div_1, div_2), div_3)
+            z = np.random.multinomial(1, np.asarray(pz.flatten()/pz.sum())[:, 0]).argmax()
             topic = (math.floor(z / 54), z % 54)
             word_topic_assignment[d_index][w_index] = topic
 
             # And increase the topic count
-            increase_counts(topic, s0, s1, s2, word)
+            increase_counts(topic, middle_counts, s2, word, d_index)
 
 
 if __name__ == '__main__':
@@ -128,14 +147,29 @@ if __name__ == '__main__':
     doc2word = list(prepro_file_load("doc2word", folder_name=folder).items())
     N, M = (corpora.num_docs, len(corpora))
 
+
     word_topic_assignment, middle_counts, s2 = random_initialize(doc2word)
+    with open('wta.pickle', "wb") as file:
+        pickle.dump(word_topic_assignment, file)
+    with open('middle_counts_csc.pickle', "wb") as file:
+        pickle.dump(middle_counts, file)
+    with open('s2.pickle', "wb") as file:
+        pickle.dump(s2, file)
+    """
+    with open('wta.pickle', 'rb') as file:
+        word_topic_assignment = pickle.load(file)
+    with open('middle_counts.pickle', 'rb') as file:
+        middle_counts = pickle.load(file)
+    with open('s2.pickle', 'rb') as file:
+        s2 = pickle.load(file)
+    """
 
     # things needed to calculate coherence
     doc2bow, dictionary, texts = prepro_file_load('doc2bow', folder_name=folder), \
                                  prepro_file_load('corpora', folder_name=folder), \
                                  list(prepro_file_load('doc2pre_text', folder_name=folder).values())
 
-    for i in tqdm(range(0, iterationNum)):
+    for i in range(0, iterationNum):
         gibbs_sampling(doc2word, word_topic_assignment, middle_counts, s2)
         print(time.strftime('%X'), "Iteration: ", i, " Completed")
 
