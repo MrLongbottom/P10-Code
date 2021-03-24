@@ -86,6 +86,7 @@ if __name__ == '__main__':
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(train_docs, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count,
                        word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed",
+        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ",
+              perplexity(test_docs, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist))
     print(get_topics(corpora, num_topics, topic_word_dist))

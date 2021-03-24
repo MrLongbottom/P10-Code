@@ -30,37 +30,35 @@ def mean_topic_diff(topic_word_dist):
     return np.mean(td)
 
 
-def perplexity(documents: List[np.ndarray], dt_dist, tw_dist, topic_c) -> float:
+def perplexity(documents: List[np.ndarray], dt_dist, tw_dist, word_topic_c, doc_topic_c) -> float:
     """
     Calculates the perplexity based on the documents given
     :param documents: a list of documents with word ids
     :return: the perplexity of the documents given
     """
-    nd = np.sum(dt_dist, 1)
     n = 0
     ll = 0.0
     for d, doc in documents:
         for w in doc:
-            ll = ll + np.log(((tw_dist[:, w] / topic_c) * (dt_dist[d, :] / nd[d])).sum())
-            n = n + 1
+            ll += np.log(((tw_dist[:, w] / word_topic_c) * (dt_dist[d, :] / doc_topic_c[d])).sum())
+            n += 1
     return np.exp(ll / (-n))
 
 
-def cat_perplexity(documents: List[np.ndarray], ct_dist, tw_dist, topic_c) -> float:
+def cat_perplexity(documents: List[np.ndarray], ct_dist, tw_dist, word_topic_c, doc_topic_c) -> float:
     """
     Calculates the perplexity based on the documents given
     :param documents: a list of documents with word ids
     :return: the perplexity of the documents given
     """
-    nd = np.sum(ct_dist, 1)
     n = 0
     ll = 0.0
     doc2category = prepro_file_load("doc2category")
     for d, doc in documents:
         cat = doc2category[d]
         for w in doc:
-            ll = ll + np.log(((tw_dist[:, w] / topic_c) * (ct_dist[cat, :] / nd[cat])).sum())
-            n = n + 1
+            ll += np.log(((tw_dist[:, w] / word_topic_c) * (ct_dist[cat, :] / doc_topic_c[cat])).sum())
+            n += 1
     return np.exp(ll / (-n))
 
 
