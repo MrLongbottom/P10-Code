@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from gibbs_utility import get_coherence, mean_topic_diff, get_topics, decrease_count, increase_count, \
-    _conditional_distribution
+    _conditional_distribution, cat_perplexity
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -91,6 +91,7 @@ if __name__ == '__main__':
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, wt_count, dt_count, word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
+              " Perplexity: ", cat_perplexity(test_docs, category_topic_dist, topic_word_dist, wt_count, dt_count),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist),
               " Topic Diff: ", mean_topic_diff(topic_word_dist))
     print(get_topics(corpora, num_topics, topic_word_dist))
