@@ -31,7 +31,6 @@ def training_function(config):
 
 
 if __name__ == '__main__':  
-    print(os.getcwd())
     doc2bow, corpora, texts = prepro_file_load('doc2bow'), \
                               prepro_file_load('corpora'), \
                               list(prepro_file_load('doc2pre_text').values())
@@ -49,4 +48,5 @@ if __name__ == '__main__':
     # Get a dataframe for analyzing trial results.
     df = analysis.results_df
     
-    pd.to_pickle("result_df.pkl")
+    # Saving the dataframe to disk
+    df.to_pickle("result_df.pkl")
