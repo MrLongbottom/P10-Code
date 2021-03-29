@@ -11,7 +11,8 @@ from gibbs_utility import get_coherence, mean_topic_diff, get_topics, decrease_c
 from preprocess.preprocessing import prepro_file_load
 
 
-def random_initialize(documents):
+def random_initialize(documents: List[np.ndarray], doc2category, num_categories: int, W: int, num_topics: int,
+                      alpha: float, beta: float):
     """
     Randomly initialisation of the word topics
     :param documents: a list of documents with their word ids
@@ -38,12 +39,12 @@ def random_initialize(documents):
     return wt_assignment, category_topic, topic_word, word_topic_c, cat_topic_c
 
 
-def gibbs_sampling(documents: List[np.ndarray],
-                   cat_topic: np.ndarray,
-                   topic_word: np.ndarray,
-                   word_topic_count: np.ndarray,
-                   doc_topic_count: np.ndarray,
-                   word_topic_assignment: List[List[int]]):
+def gibbs_sampling_category(documents: List[np.ndarray],
+                            cat_topic: np.ndarray,
+                            topic_word: np.ndarray,
+                            word_topic_count: np.ndarray,
+                            doc_topic_count: np.ndarray,
+                            word_topic_assignment: List[List[int]]):
     """
     Takes a set of documents and samples a new topic for each word within each document.
     :param word_topic_assignment: A list of documents where each index is the given words topic
@@ -69,6 +70,18 @@ def gibbs_sampling(documents: List[np.ndarray],
             increase_count(topic, topic_word, cat_topic, c_index, word, word_topic_count, doc_topic_count)
 
 
+def setup_category(alpha: float, beta: float, num_topics: int):
+    doc2word = list(prepro_file_load("doc2word").items())
+    dictionary = prepro_file_load('corpora')
+    doc2category = prepro_file_load("doc2category")
+    D, W = (dictionary.num_docs, len(dictionary))
+    train_docs, test_docs = train_test_split(doc2word, test_size=0.33)
+
+    word_topic_assignment, category_topic_dist, topic_word_dist, word_topic_count, cat_topic_count = random_initialize(
+        doc2word, doc2category, num_categories, W, num_topics, alpha, beta)
+    return train_docs, test_docs, word_topic_assignment, category_topic_dist, topic_word_dist, word_topic_count, cat_topic_count
+
+
 if __name__ == '__main__':
     alpha = 0.1
     beta = 0.1
@@ -89,7 +102,7 @@ if __name__ == '__main__':
         prepro_file_load('doc2pre_text').values())
 
     for i in tqdm(range(0, iterationNum)):
-        gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, wt_count, dt_count, word_topic_assignment)
+        gibbs_sampling_category(train_docs, category_topic_dist, topic_word_dist, wt_count, dt_count, word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
               " Perplexity: ", cat_perplexity(test_docs, category_topic_dist, topic_word_dist, wt_count, dt_count),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist),

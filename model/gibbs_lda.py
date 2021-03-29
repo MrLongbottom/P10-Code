@@ -64,7 +64,7 @@ def gibbs_sampling(documents: List[np.ndarray],
             # And increase the topic count
             increase_count(topic, topic_word, doc_topic, d_index, word, word_topic_count, doc_topic_count)
 
-            
+
 def setup(alpha: float, beta: float, num_topics: int):
     doc2word = list(prepro_file_load("doc2word").items())
     dictionary = prepro_file_load('corpora')
@@ -74,8 +74,7 @@ def setup(alpha: float, beta: float, num_topics: int):
     word_topic_assignment, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count = random_initialize(
         doc2word, D, W, num_topics, alpha, beta)
     return train_docs, test_docs, word_topic_assignment, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count
-            
-            
+
 
 if __name__ == '__main__':
     alpha = 0.1
