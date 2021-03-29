@@ -198,11 +198,11 @@ def load_document_file(filename):
 
 
 def prepro_file_load(file_name, folder_name=None):
-    paths = utility.load_dict_file("../paths.csv")
+    paths = utility.load_dict_file("/home/jupyter-admin/P10Code/paths.csv")
     if file_name not in paths:
         raise Exception('File name not in paths file')
     else:
-        file_path = '../' + paths[file_name]
+        file_path = paths[file_name]
         if folder_name is not None:
             file_path = update_path(file_path, folder_name)
         if file_path[-4:] == '.csv':

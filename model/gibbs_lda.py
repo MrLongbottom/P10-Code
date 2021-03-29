@@ -11,7 +11,7 @@ from gibbs_utility import increase_count, decrease_count, perplexity, get_cohere
 from preprocess.preprocessing import prepro_file_load
 
 
-def random_initialize(documents: List[np.ndarray]):
+def random_initialize(documents: List[np.ndarray], D: int, W: int, num_topics: int, alpha: float, beta: float):
     """
     Randomly initialisation of the word topics
     :param documents: a list of documents with their word ids
@@ -64,6 +64,18 @@ def gibbs_sampling(documents: List[np.ndarray],
             # And increase the topic count
             increase_count(topic, topic_word, doc_topic, d_index, word, word_topic_count, doc_topic_count)
 
+            
+def setup(alpha: float, beta: float, num_topics: int):
+    doc2word = list(prepro_file_load("doc2word").items())
+    dictionary = prepro_file_load('corpora')
+    D, W = (dictionary.num_docs, len(dictionary))
+    train_docs, test_docs = train_test_split(doc2word, test_size=0.33)
+
+    word_topic_assignment, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count = random_initialize(
+        doc2word, D, W, num_topics, alpha, beta)
+    return train_docs, test_docs, word_topic_assignment, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count
+            
+            
 
 if __name__ == '__main__':
     alpha = 0.1
