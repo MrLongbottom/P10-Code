@@ -121,7 +121,7 @@ def gibbs_sampling(documents: List[np.ndarray],
             div_3 = np.divide(s2_topic[:, word] + alpha, s2_topic_sum + (M * beta))
 
             pz = np.multiply(np.multiply(div_1, div_2), div_3)
-            z = np.random.multinomial(1, np.asarray(pz.flatten()/pz.sum())[:, 0]).argmax()
+            z = np.random.multinomial(1, np.asarray(pz.flatten()/pz.sum())[0]).argmax()
             topic = (math.floor(z / s2_num), z % s2_num)
             word_topic_assignment[d_index][w_index] = topic
 
