@@ -103,7 +103,6 @@ def gibbs_sampling(documents: List[np.ndarray],
     # TODO alpha estimations
     # s0_alphas = np.divide(s0_topic, np.sum(s0_topic))
     # s1_alphas = np.divide(s0_topic, np.sum(s0_topic))
-    # TODO add option based on observed tax
     # tax = doc2tax[d_index]
     s2_topic_sum = s2_topic.sum(axis=1)
 
@@ -151,6 +150,7 @@ def tax2topic_id(tax_id_list):
 
 
 if __name__ == '__main__':
+    # TODO implement third layer?
     folder = '2017'
     alpha = 0.1
     beta = 0.1
