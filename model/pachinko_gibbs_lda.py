@@ -51,7 +51,7 @@ def random_initialize(documents):
     return word_topic_assignment, middle_counts, s2_topic
 
 
-def decrease_counts(assignment, middle_counts, s2, word, d):
+def decrease_counts(assignment, middle_counts, middle_sum, dense, s2, word, d):
     """
     rows = np.where(middle_counts[d].row == assignment[0])
     cols = np.where(middle_counts[d].col == assignment[1])
@@ -59,10 +59,12 @@ def decrease_counts(assignment, middle_counts, s2, word, d):
     middle_counts[d].data[id] -= 1
     """
     middle_counts[d][assignment] -= 1
+    middle_sum[assignment[0]] -= 1
+    dense[assignment] -= 1
     s2[assignment[1], word] -= 1
 
 
-def increase_counts(assignment, middle_counts, s2, word, d):
+def increase_counts(assignment, middle_counts, middle_sum, dense, s2, word, d):
     """
     rows = np.where(middle_counts[d].row == assignment[0])
     cols = np.where(middle_counts[d].col == assignment[1])
@@ -75,6 +77,8 @@ def increase_counts(assignment, middle_counts, s2, word, d):
         np.append(middle_counts[d].col, assignment[1])
     """
     middle_counts[d][assignment] += 1
+    middle_sum[assignment[0]] += 1
+    dense[assignment] += 1
     s2[assignment[1], word] += 1
 
 
@@ -97,29 +101,29 @@ def gibbs_sampling(documents: List[np.ndarray],
     # TODO add option based on observed tax
     # tax = doc2tax[d_index]
     for d_index, doc in tqdm(documents):
+
+        middle_counts[d_index].tocsr()
+        sum_s1_middle = middle_counts[d_index].sum(axis=1)
+        dense = middle_counts[d_index].todense()
+
         for w_index, word in enumerate(doc):
 
             # Find the topic for the given word a decrease the topic count
             topic = wta[d_index][w_index]
-            decrease_counts(topic, middle_counts, s2, word, d_index)
+            decrease_counts(topic, middle_counts, sum_s1_middle, dense, s2, word, d_index)
 
-            middle_counts[d_index].tocsr()
-            sum_middle = middle_counts[d_index].sum(axis=1)
-            dense = middle_counts[d_index].todense()
-
-            div_1 = np.divide(sum_middle + alpha, len(doc) + (s1_num * alpha))
-            div_2 = np.divide(dense + alpha, sum_middle + (s2_num * alpha))
+            div_1 = np.divide(sum_s1_middle + alpha, len(doc) + (s1_num * alpha))
+            div_2 = np.divide(dense + alpha, sum_s1_middle + (s2_num * alpha))
             div_3 = np.divide(s2_topic[:, word] + alpha, s2_topic.sum(axis=1) + (M * beta))
 
             pz = np.multiply(np.multiply(div_1, div_2), div_3)
             z = np.random.multinomial(1, np.asarray(pz.flatten()/pz.sum())[:, 0]).argmax()
-            topic = (math.floor(z / 54), z % 54)
+            topic = (math.floor(z / s2_num), z % s2_num)
             word_topic_assignment[d_index][w_index] = topic
-            middle_counts[d_index].tolil()
 
             # And increase the topic count
-            increase_counts(topic, middle_counts, s2, word, d_index)
-
+            increase_counts(topic, middle_counts, sum_s1_middle, dense, s2, word, d_index)
+        middle_counts[d_index].tolil()
 
 if __name__ == '__main__':
     folder = '2017'
