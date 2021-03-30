@@ -6,6 +6,7 @@ from scipy import sparse
 import numpy as np
 from tqdm import tqdm
 
+import utility
 from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics, decrease_count, increase_count, \
     cat_perplexity
 from preprocess.preprocessing import prepro_file_load
@@ -19,19 +20,16 @@ def random_initialize(documents):
     :return: word_topic_assignment,
     """
     print("Random Initilization")
-    #s0_topic = np.zeros([s1_num])
-    #s1_topic = np.zeros([s1_num, s2_num])
     np.random.seed()
     s2_topic = np.zeros([s2_num, M])
     middle_counts = []
     word_topic_assignment = []
     for d, doc in tqdm(documents):
         sp = sparse.dok_matrix((s1_num, s2_num), np.intc)
-        #tax = doc2tax[d]
+        tax_ids = doc2tax[d]
+        tax = tax2topic_id(tax_ids)
         currdoc = []
         for w in doc:
-            # TODO add option based on observed tax
-            # TODO rest maybe just random
             """
             div_1 = np.divide(s0_topic + alpha, len(doc) + (s1_num * alpha))
             # s1_state = [len([x for x in curr_doc if x[0] == s1]) for s1 in range(s1_num)]
@@ -40,12 +38,17 @@ def random_initialize(documents):
             pz = np.multiply(np.multiply(div_1, div_2).T, div_3)
             z = np.random.multinomial(1, pz.flatten() / pz.sum()).argmax()
             """
-            z = np.random.randint(s1_num*s2_num)
-            z1 = math.floor(z / s2_num)
-            z2 = z % s2_num
-            sp[z1, z2] += 1
-            currdoc.append((z1, z2))
-            s2_topic[z2, w] += 1
+            if len(tax) == 1:
+                rand = np.random.randint(s2_num)
+                z = (tax[0], rand)
+            elif len(tax) == 2:
+                z = (tax[0], tax[1])
+            else:
+                rand = np.random.randint(s1_num*s2_num)
+                z = (math.floor(rand / s2_num), rand % s2_num)
+            sp[z] += 1
+            currdoc.append(z)
+            s2_topic[z[1], w] += 1
         word_topic_assignment.append(currdoc)
         middle_counts.append(sparse.lil_matrix(sp))
     return word_topic_assignment, middle_counts, s2_topic
@@ -105,6 +108,8 @@ def gibbs_sampling(documents: List[np.ndarray],
     s2_topic_sum = s2_topic.sum(axis=1)
 
     for d_index, doc in tqdm(documents):
+        if doc2tax[d_index] == [0]:
+            continue
 
         middle_counts[d_index].tocsr()
         sum_s1_middle = middle_counts[d_index].sum(axis=1)
@@ -130,6 +135,21 @@ def gibbs_sampling(documents: List[np.ndarray],
         middle_counts[d_index].tolil()
 
 
+def tax2topic_id(tax_id_list):
+    topic_ids = []
+    for tax in tax_id_list:
+        tax_name = id2tax[tax]
+        if tax_name == '':
+            return topic_ids
+        if tax_name in struct_root[0]:
+            topic_ids.append(struct_root[0].index(tax_name))
+        elif len(topic_ids) == 1 and tax_name in struct_root[1]:
+            topic_ids.append(struct_root[1].index(tax_name))
+        else:
+            return topic_ids
+    return topic_ids
+
+
 if __name__ == '__main__':
     folder = '2017'
     alpha = 0.1
@@ -151,6 +171,9 @@ if __name__ == '__main__':
                 if id2tax[t] not in parent:
                     parent[id2tax[t]] = {}
                 parent = parent[id2tax[t]]
+    struct_root = []
+    struct_root.append([x for x in list(root)])
+    struct_root.append([y for x in root.items() for y in list(x[1])])
     s1_num = len(root)
     s2_num = np.sum([len(x) for x in root.values()])
 
