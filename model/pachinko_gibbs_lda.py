@@ -149,14 +149,7 @@ def tax2topic_id(tax_id_list):
     return topic_ids
 
 
-if __name__ == '__main__':
-    # TODO implement third layer?
-    folder = '2017'
-    alpha = 0.1
-    beta = 0.1
-    iterationNum = 10
-    doc2tax = prepro_file_load("doc2taxonomy", folder_name=folder)
-    id2tax = prepro_file_load("id2taxonomy", folder_name=folder)
+def taxonomy_structure():
     root = {}
     for d2t in doc2tax.values():
         parent = None
@@ -174,15 +167,28 @@ if __name__ == '__main__':
     struct_root = []
     struct_root.append([x for x in list(root)])
     struct_root.append([y for x in root.items() for y in list(x[1])])
-    s1_num = len(root)
-    s2_num = np.sum([len(x) for x in root.values()])
+    return root, struct_root
+
+
+if __name__ == '__main__':
+    # TODO implement third layer?
+    folder = '2017'
+    alpha = 0.1
+    beta = 0.1
+    iterationNum = 10
+    doc2tax = prepro_file_load("doc2taxonomy", folder_name=folder)
+    id2tax = prepro_file_load("id2taxonomy", folder_name=folder)
+    root, struct_root = taxonomy_structure()
+    s1_num = len(struct_root[0])
+    s2_num = len(struct_root[1])
 
     corpora = prepro_file_load("corpora", folder_name=folder)
     doc2word = list(prepro_file_load("doc2word", folder_name=folder).items())
     N, M = (corpora.num_docs, len(corpora))
 
-
     word_topic_assignment, middle_counts, s2 = random_initialize(doc2word)
+    """
+    # dump init files
     with open('wta.pickle', "wb") as file:
         pickle.dump(word_topic_assignment, file)
     with open('middle_counts_csc.pickle', "wb") as file:
@@ -190,6 +196,8 @@ if __name__ == '__main__':
     with open('s2.pickle', "wb") as file:
         pickle.dump(s2, file)
     """
+    """
+    # load init files
     with open('wta.pickle', 'rb') as file:
         word_topic_assignment = pickle.load(file)
     with open('middle_counts.pickle', 'rb') as file:
