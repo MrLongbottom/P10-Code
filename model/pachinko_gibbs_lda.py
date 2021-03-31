@@ -44,7 +44,7 @@ def random_initialize(documents):
             elif len(tax) == 2:
                 z = (tax[0], tax[1])
             else:
-                rand = np.random.randint(s1_num*s2_num)
+                rand = np.random.randint(s1_num * s2_num)
                 z = (math.floor(rand / s2_num), rand % s2_num)
             sp[z] += 1
             currdoc.append(z)
@@ -115,7 +115,6 @@ def gibbs_sampling(documents: List[np.ndarray],
         dense = middle_counts[d_index].todense()
 
         for w_index, word in enumerate(doc):
-
             # Find the topic for the given word a decrease the topic count
             topic = wta[d_index][w_index]
             decrease_counts(topic, middle_counts, sum_s1_middle, dense, s2, s2_topic_sum, word, d_index)
@@ -125,7 +124,7 @@ def gibbs_sampling(documents: List[np.ndarray],
             div_3 = np.divide(s2_topic[:, word] + alpha, s2_topic_sum + (M * beta))
 
             pz = np.multiply(np.multiply(div_1, div_2), div_3)
-            z = np.random.multinomial(1, np.asarray(pz.flatten()/pz.sum())[0]).argmax()
+            z = np.random.multinomial(1, np.asarray(pz.flatten() / pz.sum())[0]).argmax()
             topic = (math.floor(z / s2_num), z % s2_num)
             word_topic_assignment[d_index][w_index] = topic
 
@@ -207,14 +206,13 @@ if __name__ == '__main__':
     """
 
     # things needed to calculate coherence
-    doc2bow, dictionary, texts = prepro_file_load('doc2bow', folder_name=folder), \
-                                 prepro_file_load('corpora', folder_name=folder), \
-                                 list(prepro_file_load('doc2pre_text', folder_name=folder).values())
+    doc2bow, texts = prepro_file_load('doc2bow', folder_name=folder), \
+                     list(prepro_file_load('doc2pre_text', folder_name=folder).values())
 
     print("Starting Gibbs")
-
     for i in range(0, iterationNum):
         gibbs_sampling(doc2word, word_topic_assignment, middle_counts, s2)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed")
+        print(time.strftime('%X'), "Iteration: ", i, " Completed",
+              "Coherence: ", get_coherence(doc2bow, texts, corpora, s2_num, s2))
 
     print(get_topics(corpora, s2_num, s2))
