@@ -211,8 +211,9 @@ if __name__ == '__main__':
 
     print("Starting Gibbs")
     for i in range(0, iterationNum):
-        gibbs_sampling(doc2word, word_topic_assignment, middle_counts, s2)
+        gibbs_sampling(doc2word, word_topic_assignment, middle_layers, topic_to_word)
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
-              "Coherence: ", get_coherence(doc2bow, texts, corpora, s2_num, s2))
+              "Coherence: ", get_coherence(doc2bow, texts, corpora, layer_lengths[len(layer_lengths)-1], topic_to_word))
 
-    print(get_topics(corpora, s2_num, s2))
+
+    print(get_topics(corpora, s2_num, s2_to_words))
