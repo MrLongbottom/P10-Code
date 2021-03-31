@@ -21,116 +21,96 @@ def random_initialize(documents):
     """
     print("Random Initilization")
     np.random.seed()
-    s2_topic = np.zeros([s2_num, M])
-    middle_counts = []
+    middle_layers = [[] for _ in range(N)]
+    topic_to_word = np.zeros([layer_lengths[len(layer_lengths)-1], M])
     word_topic_assignment = []
     for d, doc in tqdm(documents):
-        sp = sparse.dok_matrix((s1_num, s2_num), np.intc)
+        # TODO figure out how to sample from docs with multiple taxonomies
+        mid_doc_layers = [np.zeros((layer_lengths[x], layer_lengths[x+1]), dtype=np.intc) for x in range(len(layer_lengths)-1)]
         tax_ids = doc2tax[d]
         tax = tax2topic_id(tax_ids)
         currdoc = []
         for w in doc:
-            """
-            div_1 = np.divide(s0_topic + alpha, len(doc) + (s1_num * alpha))
-            # s1_state = [len([x for x in curr_doc if x[0] == s1]) for s1 in range(s1_num)]
-            div_2 = np.divide(s1_topic.T + alpha, s0_topic + (s2_num * alpha))
-            div_3 = np.divide(s2_topic[:, w] + alpha, s1_topic.sum(axis=0) + (M * alpha))
-            pz = np.multiply(np.multiply(div_1, div_2).T, div_3)
-            z = np.random.multinomial(1, pz.flatten() / pz.sum()).argmax()
-            """
-            if len(tax) == 1:
-                rand = np.random.randint(s2_num)
-                z = (tax[0], rand)
-            elif len(tax) == 2:
-                z = (tax[0], tax[1])
-            else:
-                rand = np.random.randint(s1_num * s2_num)
-                z = (math.floor(rand / s2_num), rand % s2_num)
-            sp[z] += 1
+            # generate missing topic parts
+            word_tax = [x for x in tax]
+            while len(word_tax) < len(layer_lengths):
+                word_tax.append(np.random.randint(layer_lengths[len(word_tax)]))
+            z = tuple(word_tax)
+            # apply various counts
+            for i, matrix in enumerate(mid_doc_layers):
+                matrix[z[i], z[i+1]] += 1
             currdoc.append(z)
-            s2_topic[z[1], w] += 1
+            topic_to_word[z[len(z)-1], w] += 1
         word_topic_assignment.append(currdoc)
-        middle_counts.append(sparse.lil_matrix(sp))
-    return word_topic_assignment, middle_counts, s2_topic
+        middle_layers[d] = mid_doc_layers
+    return word_topic_assignment, middle_layers, topic_to_word
 
 
-def decrease_counts(assignment, middle_counts, middle_sum, dense, s2, s2_sum, word, d):
-    """
-    rows = np.where(middle_counts[d].row == assignment[0])
-    cols = np.where(middle_counts[d].col == assignment[1])
-    id = np.intersect1d(rows, cols)[0]
-    middle_counts[d].data[id] -= 1
-    """
-    middle_counts[d][assignment] -= 1
-    middle_sum[assignment[0]] -= 1
-    dense[assignment] -= 1
-    s2[assignment[1], word] -= 1
-    s2_sum[assignment[1]] -= 1
+def decrease_counts(topics, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d):
+    for i, x in enumerate(middle_layers[d]):
+        x[topics[i], topics[i+1]] -= 1
+    for i, x in enumerate(middle_sums):
+        x[topics[i]] -= 1
+    topic_to_word[topics[len(topics)-1], word] -= 1
+    topic_to_word_sums[topics[len(topics)-1]] -= 1
 
 
-def increase_counts(assignment, middle_counts, middle_sum, dense, s2, s2_sum, word, d):
-    """
-    rows = np.where(middle_counts[d].row == assignment[0])
-    cols = np.where(middle_counts[d].col == assignment[1])
-    if len(rows) > 0 and len(cols) > 1:
-        id = np.intersect1d(rows, cols)[0]
-        middle_counts[d].data[id] += 1
-    else:
-        np.append(middle_counts[d].data, 1)
-        np.append(middle_counts[d].row, assignment[0])
-        np.append(middle_counts[d].col, assignment[1])
-    """
-    middle_counts[d][assignment] += 1
-    middle_sum[assignment[0]] += 1
-    dense[assignment] += 1
-    s2[assignment[1], word] += 1
-    s2_sum[assignment[1]] += 1
+def increase_counts(topics, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d):
+    for i, x in enumerate(middle_layers[d]):
+        x[topics[i], topics[i + 1]] += 1
+    for i, x in enumerate(middle_sums):
+        x[topics[i], topics[i + 1]] += 1
+    topic_to_word[topics[len(topics) - 1], word] += 1
+    topic_to_word_sums[topics[len(topics) - 1]] += 1
 
 
 def gibbs_sampling(documents: List[np.ndarray],
                    wta,
-                   middle_counts,
-                   s2_topic):
+                   middle_layers,
+                   topic_to_word):
     """
     Takes a set of documents and samples a new topic for each word within each document.
-    :param word_topic_assignment: A list of documents where each index is the given words topic
-    :param topic_count: the number of the times each topic is used
+    :param middle_layers:
+    :param wta: Word-Topic-Assignments. A list of documents where each index is the given words topic
     :param documents: a list of documents with their word ids
-    :param cat_topic: a matrix describing the number of times each topic within each category
-    :param topic_word: a matrix describing the number of times each word within each topic
+    :param topic_to_word: a matrix describing the number of times each word within each topic
     """
 
     # TODO alpha estimations
     # s0_alphas = np.divide(s0_topic, np.sum(s0_topic))
     # s1_alphas = np.divide(s0_topic, np.sum(s0_topic))
     # tax = doc2tax[d_index]
-    s2_topic_sum = s2_topic.sum(axis=1)
+    topic_to_word_sums = topic_to_word.sum(axis=1)
 
     for d_index, doc in tqdm(documents):
-        if doc2tax[d_index] == [0]:
-            continue
+        # TODO account for already assigned documents / words
+        doc_tax = doc2tax[d_index]
 
-        middle_counts[d_index].tocsr()
-        sum_s1_middle = middle_counts[d_index].sum(axis=1)
-        dense = middle_counts[d_index].todense()
+        middle_sums = [x.sum(axis=1) for x in middle_layers[d_index]]
 
         for w_index, word in enumerate(doc):
             # Find the topic for the given word a decrease the topic count
             topic = wta[d_index][w_index]
-            decrease_counts(topic, middle_counts, sum_s1_middle, dense, s2, s2_topic_sum, word, d_index)
+            decrease_counts(topic, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d_index)
 
-            div_1 = np.divide(sum_s1_middle + alpha, len(doc) + (s1_num * alpha))
-            div_2 = np.divide(dense + alpha, sum_s1_middle + (s2_num * alpha))
-            div_3 = np.divide(s2_topic[:, word] + alpha, s2_topic_sum + (M * beta))
+            divs = []
+            divs.append(np.divide(middle_sums[0] + alpha, len(doc) + (layer_lengths[0] * alpha)))
+            for i in range(len(middle_sums)):
+                divs.append(np.divide((middle_layers[d_index][i] + alpha).T, (middle_sums[i] + (layer_lengths[i+1] * alpha))))
+            divs.append(np.divide(topic_to_word[:, word] + alpha, topic_to_word_sums + (M * beta)))
 
-            pz = np.multiply(np.multiply(div_1, div_2), div_3)
-            z = np.random.multinomial(1, np.asarray(pz.flatten() / pz.sum())[0]).argmax()
+            # TODO make work for any number of dimensions
+            step1 = np.multiply(divs[0], divs[1])
+            step2 = np.stack([np.multiply(x, step1.T) for x in divs[2]]).reshape((289, 60, 5))
+            step3 = np.multiply(step2.T, divs[3])
+
+            z = np.random.multinomial(1, np.asarray(step3.flatten() / step3.sum())[0]).argmax()
+            # TODO find topic based on flattened number
             topic = (math.floor(z / s2_num), z % s2_num)
             word_topic_assignment[d_index][w_index] = topic
 
             # And increase the topic count
-            increase_counts(topic, middle_counts, sum_s1_middle, dense, s2, s2_topic_sum, word, d_index)
-        middle_counts[d_index].tolil()
+            increase_counts(topic, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d_index)
 
 
 def tax2topic_id(tax_id_list):
@@ -141,21 +121,22 @@ def tax2topic_id(tax_id_list):
             return topic_ids
         if tax_name in struct_root[0]:
             topic_ids.append(struct_root[0].index(tax_name))
-        elif len(topic_ids) == 1 and tax_name in struct_root[1]:
-            topic_ids.append(struct_root[1].index(tax_name))
+        elif len(topic_ids) < mid_layers_num and tax_name in struct_root[len(topic_ids)]:
+            topic_ids.append(struct_root[len(topic_ids)].index(tax_name))
         else:
             return topic_ids
     return topic_ids
 
 
-def taxonomy_structure():
+def taxonomy_structure(layers):
     root = {}
     for d2t in doc2tax.values():
         parent = None
         for t in d2t:
             if id2tax[t] == '':
                 continue
-            elif parent is None or id2tax[t] == '' or id2tax[t] == 'EMNER' or id2tax[t] == 'STEDER':
+            elif parent is None or id2tax[t] == 'EMNER' or id2tax[t] == 'STEDER' or id2tax[t] == 'TEMA' \
+                    or id2tax[t] == 'IMPORT' or id2tax[t] == 'INDHOLDSTYPER':
                 if id2tax[t] not in root:
                     root[id2tax[t]] = {}
                 parent = root[id2tax[t]]
@@ -164,28 +145,35 @@ def taxonomy_structure():
                     parent[id2tax[t]] = {}
                 parent = parent[id2tax[t]]
     struct_root = []
-    struct_root.append([x for x in list(root)])
-    struct_root.append([y for x in root.items() for y in list(x[1])])
+    for l in range(layers):
+        if l == 0:
+            struct_root.append([x for x in root.items()])
+        else:
+            struct_root.append([y for x in struct_root[l-1] for y in x[1].items()])
+    struct_root = [[y[0] for y in x] for x in struct_root]
     return root, struct_root
 
 
 if __name__ == '__main__':
     # TODO implement third layer?
     folder = '2017'
+    mid_layers_num = 3
     alpha = 0.1
     beta = 0.1
+    K = 80
     iterationNum = 10
     doc2tax = prepro_file_load("doc2taxonomy", folder_name=folder)
     id2tax = prepro_file_load("id2taxonomy", folder_name=folder)
-    root, struct_root = taxonomy_structure()
-    s1_num = len(struct_root[0])
-    s2_num = len(struct_root[1])
 
     corpora = prepro_file_load("corpora", folder_name=folder)
     doc2word = list(prepro_file_load("doc2word", folder_name=folder).items())
     N, M = (corpora.num_docs, len(corpora))
 
-    word_topic_assignment, middle_counts, s2 = random_initialize(doc2word)
+    root, struct_root = taxonomy_structure(mid_layers_num)
+    layer_lengths = [len(x) for x in struct_root]
+    #layer_lengths.append(K)
+
+    word_topic_assignment, middle_layers, topic_to_word = random_initialize(doc2word)
     """
     # dump init files
     with open('wta.pickle', "wb") as file:
