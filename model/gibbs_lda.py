@@ -97,7 +97,7 @@ def gibbs_sampling(documents: List[np.ndarray],
 if __name__ == '__main__':
     alpha = 0.1
     beta = 0.1
-    iterationNum = 1
+    iterationNum = 50
     num_topics = 10
     with open("../preprocess/generated_files/corpora", 'rb') as file:
         corpora = pickle.load(file)
