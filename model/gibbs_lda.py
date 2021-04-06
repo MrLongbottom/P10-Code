@@ -11,6 +11,35 @@ from gibbs_utility import increase_count, decrease_count, perplexity, get_cohere
 from preprocess.preprocessing import prepro_file_load
 
 
+class Model:
+    def __init__(self, num_topics, alpha, eta, doc_topic, topic_word):
+        self.num_topics = num_topics
+        self.alpha = alpha
+        self.eta = eta
+        self.doc_topic = doc_topic
+        self.topic_word = topic_word
+
+    def to_dict(self):
+        return {"num_topic": self.num_topics,
+                "alpha": self.alpha,
+                "eta": self.eta,
+                "doc_topic": self.doc_topic,
+                "topic_word": self.topic_word}
+
+    def to_str(self):
+        return f"{self.num_topics}_{self.alpha}_{self.eta}_model"
+
+    def save_model(self, save_path=""):
+        full_path = save_path + self.to_str()
+        with open(full_path, "wb") as file_path:
+            pickle.dump(self.to_dict(), file_path)
+
+
+def load_model(load_path):
+    with open(load_path, 'rb') as file_path:
+        return pickle.load(file_path)
+
+
 def random_initialize(documents: List[np.ndarray]):
     """
     Randomly initialisation of the word topics
@@ -68,7 +97,7 @@ def gibbs_sampling(documents: List[np.ndarray],
 if __name__ == '__main__':
     alpha = 0.1
     beta = 0.1
-    iterationNum = 50
+    iterationNum = 1
     num_topics = 10
     with open("../preprocess/generated_files/corpora", 'rb') as file:
         corpora = pickle.load(file)
@@ -89,4 +118,6 @@ if __name__ == '__main__':
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ",
               perplexity(test_docs, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist))
+    model = Model(num_topics, alpha, beta, document_topic_dist, topic_word_dist)
+    model.save_model()
     print(get_topics(corpora, num_topics, topic_word_dist))
