@@ -24,13 +24,12 @@ if __name__ == '__main__':
     sizes2 = list(distribution_cut.values())
     print("Mean: {}, Median: {}, Min: {}, Max: {}".format(np.mean(sizes), np.median(sizes), np.min(sizes), np.max(sizes)))
     print("Mean: {}, Median: {}, Min: {}, Max: {}".format(np.mean(sizes2), np.median(sizes2), np.min(sizes2), np.max(sizes2)))
-    names = [str(x) for x in sizes]
     fig1, ax1 = plt.subplots()
     # Cumulative Histogram
     #n, bins, patches = ax1.hist(sizes2, 100, density=False, histtype='step',
     #                           cumulative=False, label='Empirical')
-    # Boxplot
 
+    # Boxplot
     box = ax1.boxplot(sizes, sym='')
     for line in box['medians']:
         x, y = line.get_xydata()[0]
@@ -48,6 +47,7 @@ if __name__ == '__main__':
         ax1.text(x - 0.06, y, '%.0f' % y, horizontalalignment='center', verticalalignment='center')
 
     # Pie Chart
+    #names = [str(x) for x in sizes]
     #ax1.pie(sizes, autopct='%1.1f', labels=names, startangle=90)
     #ax1.axis('equal')
     plt.show()
