@@ -122,7 +122,7 @@ def construct_metadata(meta, bad_ids):
     for v in taxonomies.values():
         for tax in v.split('/'):
             distribution[tax] = distribution.get(tax, 0) + 1
-    bad_cat = [k for k, v in distribution.items() if v < 35]
+    bad_cat = [k for k, v in distribution.items() if v < 4]
     taxonomies = {k: '/'.join([x for x in v.split('/') if x not in bad_cat]) for k, v in taxonomies.items()}
 
     # make value -> id mappings
