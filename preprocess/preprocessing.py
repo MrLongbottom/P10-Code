@@ -64,6 +64,10 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     texts = {k: v for i, (k, v) in enumerate(texts.items()) if i not in empty_docs}
     id2doc_file = {k: v for i, (k, v) in enumerate(id2doc_file.items()) if i not in empty_docs}
 
+    # fix document IDs after removing empty documents
+    texts = {i: v for i, v in zip(range(len(texts.values())), list(texts.values()))}
+    id2doc_file = {i: v for i, v in zip(range(len(id2doc_file.values())), list(id2doc_file.values()))}
+
     doc2bow = make_doc2bow(corpora, documents)
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
