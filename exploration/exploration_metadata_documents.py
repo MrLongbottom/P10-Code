@@ -60,5 +60,6 @@ if __name__ == '__main__':
         id = random.choice(documentIDs)
         print(f"ID: {id}")
         print(f"Author: {id2author[docAuthors[id]]}")
+        print(f"File name: {docFileNames[id]}")
         print(documents[id])
         print(documentsRaw[id] + "\n")
