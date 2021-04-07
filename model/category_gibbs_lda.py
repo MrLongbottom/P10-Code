@@ -96,6 +96,6 @@ if __name__ == '__main__':
               " Perplexity: ", cat_perplexity(test_docs, category_topic_dist, topic_word_dist, wt_count, dt_count),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist),
               " Topic Diff: ", mean_topic_diff(topic_word_dist))
-    model = Model(num_topics, alpha, beta, category_topic_dist, topic_word_dist, "standard")
+    model = Model(num_topics, alpha, beta, category_topic_dist, topic_word_dist, "category")
     model.save_model()
     print(get_topics(corpora, num_topics, topic_word_dist))
