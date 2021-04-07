@@ -110,11 +110,10 @@ def construct_metadata(meta, bad_ids):
     categories, authors, taxonomies = meta
 
     # Filter meta data mappings:
-    """
     distribution = {}
     for v in categories.values():
         distribution[v] = distribution.get(v, 0) + 1
-    bad_cat = [k for k, v in distribution.items() if v < 140]
+    bad_cat = [k for k, v in distribution.items() if v < 139]
     categories = {k: v if v not in bad_cat else 'misc' for k, v in categories.items()}
 
     distribution = {}
@@ -123,13 +122,12 @@ def construct_metadata(meta, bad_ids):
     bad_cat = [k for k, v in distribution.items() if v < 14]
     authors = {k: v if v not in bad_cat else 'misc' for k, v in authors.items()}
 
-    # TODO taxonomy needs to be reworked into smaller parts, when we want to work with it.
-    #distribution = {}
-    #for v in taxonomies.values():
-    #    distribution[v] = distribution.get(v, 0) + 1
-    #bad_cat = [k for k, v in distribution.items() if v < 140]
-    #taxonomies = {k: v if v not in bad_cat else 'misc' for k, v in taxonomies.items()}
-    """
+    distribution = {}
+    for v in taxonomies.values():
+        for tax in v.split('/'):
+            distribution[tax] = distribution.get(tax, 0) + 1
+    bad_cat = [k for k, v in distribution.items() if v < 4]
+    taxonomies = {k: '/'.join([x for x in v.split('/') if x not in bad_cat]) for k, v in taxonomies.items()}
 
     # make value -> id mappings
     cat2id = {v: i for v, i in zip(list(set(categories.values())), range(len(set(categories.values()))))}
