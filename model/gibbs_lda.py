@@ -12,12 +12,13 @@ from preprocess.preprocessing import prepro_file_load
 
 
 class Model:
-    def __init__(self, num_topics, alpha, eta, doc_topic, topic_word):
+    def __init__(self, num_topics, alpha, eta, doc_topic, topic_word, name):
         self.num_topics = num_topics
         self.alpha = alpha
         self.eta = eta
         self.doc_topic = doc_topic
         self.topic_word = topic_word
+        self.name = name
 
     def to_dict(self):
         return {"num_topic": self.num_topics,
@@ -27,7 +28,7 @@ class Model:
                 "topic_word": self.topic_word}
 
     def to_str(self):
-        return f"{self.num_topics}_{self.alpha}_{self.eta}_model"
+        return f"{self.num_topics}_{self.alpha}_{self.eta}_{self.name}"
 
     def save_model(self, save_path=""):
         full_path = save_path + self.to_str()
@@ -118,6 +119,6 @@ if __name__ == '__main__':
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ",
               perplexity(test_docs, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist))
-    model = Model(num_topics, alpha, beta, document_topic_dist, topic_word_dist)
+    model = Model(num_topics, alpha, beta, document_topic_dist, topic_word_dist, "standard")
     model.save_model()
     print(get_topics(corpora, num_topics, topic_word_dist))
