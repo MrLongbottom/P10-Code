@@ -19,24 +19,24 @@ def random_initialize(documents):
     :return: word_topic_assignment,
     """
     print("Random Initilization")
-    category_topic = np.zeros([num_categories, num_topics]) + alpha
+    author_topic = np.zeros([num_authors, num_topics]) + alpha
     topic_word = np.zeros([num_topics, W]) + beta
     word_topic_c = np.zeros([num_topics]) + W * beta
-    cat_topic_c = np.zeros([num_categories]) + num_topics * alpha
+    author_topic_c = np.zeros([num_authors]) + num_topics * alpha
     wt_assignment = []
     for d_index, doc in tqdm(documents):
         curr_doc = []
-        cat = doc2category[d_index]
+        author = doc2author[d_index]
         for word in doc:
-            pz = _conditional_distribution(cat, word, topic_word, category_topic, word_topic_c, cat_topic_c)
+            pz = _conditional_distribution(author, word, topic_word, author_topic, word_topic_c, author_topic_c)
             topic = np.random.multinomial(1, pz / pz.sum()).argmax()
             curr_doc.append(topic)
-            category_topic[cat, topic] += 1
+            author_topic[author, topic] += 1
             topic_word[topic, word] += 1
             word_topic_c[topic] += 1
-            cat_topic_c[cat] += 1
+            author_topic_c[author] += 1
         wt_assignment.append(curr_doc)
-    return wt_assignment, category_topic, topic_word, word_topic_c, cat_topic_c
+    return wt_assignment, author_topic, topic_word, word_topic_c, author_topic_c
 
 
 def gibbs_sampling(documents: List[np.ndarray],
@@ -55,20 +55,20 @@ def gibbs_sampling(documents: List[np.ndarray],
     :param topic_word: a matrix describing the number of times each word within each topic
     """
     for d_index, doc in documents:
-        c_index = doc2category[d_index]
+        a_index = doc2author[d_index]
         for w_index, word in enumerate(doc):
             # Find the topic for the given word a decrease the topic count
             topic = word_topic_assignment[d_index][w_index]
-            decrease_count(topic, topic_word, cat_topic, c_index, word, word_topic_count, doc_topic_count)
+            decrease_count(topic, topic_word, cat_topic, a_index, word, word_topic_count, doc_topic_count)
 
             # Sample a new topic based on cat_topic and topic word
             # and assign it to the word we are working with
-            pz = _conditional_distribution(c_index, word, topic_word, cat_topic, word_topic_count, doc_topic_count)
+            pz = _conditional_distribution(a_index, word, topic_word, cat_topic, word_topic_count, doc_topic_count)
             topic = np.random.multinomial(1, pz).argmax()
             word_topic_assignment[d_index][w_index] = topic
 
             # And increase the topic count
-            increase_count(topic, topic_word, cat_topic, c_index, word, word_topic_count, doc_topic_count)
+            increase_count(topic, topic_word, cat_topic, a_index, word, word_topic_count, doc_topic_count)
 
 
 if __name__ == '__main__':
@@ -76,27 +76,27 @@ if __name__ == '__main__':
     beta = 0.1
     iterationNum = 50
     num_topics = 10
-    doc2category = prepro_file_load("doc2category")
-    num_categories = len(set(list(doc2category.values())))
+    doc2author = prepro_file_load("doc2author")
+    num_authors = len(set(list(doc2author.values())))
     with open("../preprocess/generated_files/corpora", 'rb') as file:
         corpora = pickle.load(file)
     doc2word = list(prepro_file_load("doc2word").items())
     D, W = (corpora.num_docs, len(corpora))
     train_docs, test_docs = train_test_split(doc2word, test_size=0.33, shuffle=True)
 
-    word_topic_assignment, category_topic_dist, topic_word_dist, wt_count, dt_count = random_initialize(doc2word)
+    word_topic_assignment, author_topic_dist, topic_word_dist, wt_count, dt_count = random_initialize(doc2word)
 
     # things needed to calculate coherence
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
         prepro_file_load('doc2pre_text').values())
 
     for i in tqdm(range(0, iterationNum)):
-        gibbs_sampling(train_docs, category_topic_dist, topic_word_dist, wt_count, dt_count, word_topic_assignment)
+        gibbs_sampling(train_docs, author_topic_dist, topic_word_dist, wt_count, dt_count, word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
               " Perplexity: ",
-              x_perplexity(test_docs, category_topic_dist, topic_word_dist, wt_count, dt_count, doc2category),
+              x_perplexity(test_docs, author_topic_dist, topic_word_dist, wt_count, dt_count, doc2author),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist),
               " Topic Diff: ", mean_topic_diff(topic_word_dist))
-    model = Model(num_topics, alpha, beta, category_topic_dist, topic_word_dist, "category")
+    model = Model(num_topics, alpha, beta, author_topic_dist, topic_word_dist, "category")
     model.save_model()
     print(get_topics(corpora, num_topics, topic_word_dist))
