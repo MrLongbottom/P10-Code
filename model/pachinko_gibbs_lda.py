@@ -104,13 +104,16 @@ def gibbs_sampling(documents: List[np.ndarray],
             step3 = np.einsum('ijk,k->ijk', step2, divs[3])
 
             flat = np.asarray(step3.flatten() / step3.sum())
-            z = np.random.multinomial(1, flat).argmax()
-
+            z = np.random.multinomial(1, flat)
             # TODO make work for any number of dimensions (currently only working with 3 middle layers)
-            z1 = math.floor(z / (layer_lengths[1] * layer_lengths[2]))
-            z2 = math.floor((z % (layer_lengths[1] * layer_lengths[2])) / layer_lengths[2])
-            z3 = math.floor(z % layer_lengths[2])
-            topic = (z1, z2, z3)
+            z = z.reshape(layer_lengths)
+
+            #z1 = z.argmax(axis=1).argmax(axis=1).argmax()
+            #z2 = z.argmax(axis=0).argmax(axis=1).argmax()
+            #z3 = z.argmax(axis=0).argmax(axis=0).argmax()
+            #topic = (z1, z2, z3)
+
+            topic = tuple([x[0] for x in np.where(z == z.max())])
 
             word_topic_assignment[d_index][w_index] = topic
             # And increase the topic count
