@@ -12,7 +12,6 @@ from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics
 from preprocess.preprocessing import prepro_file_load
 import math
 
-
 def random_initialize(documents):
     """
     Randomly initialisation of the word topics
@@ -101,19 +100,19 @@ def gibbs_sampling(documents: List[np.ndarray],
 
             # TODO make work for any number of dimensions
             step1 = np.multiply(divs[0], divs[1])
-            step2 = np.stack([np.multiply(x, step1.T) for x in divs[2]]).reshape((289, 60, 5))
-            step3 = np.multiply(step2.T, divs[3])
+            step2 = np.einsum('ij,jk->kji', divs[2], step1)
+            step3 = np.multiply(step2, divs[3])
 
             flat = np.asarray(step3.flatten() / step3.sum())
-
             z = np.random.multinomial(1, flat).argmax()
+
             # TODO make work for any number of dimensions
             z1 = math.floor(z / (layer_lengths[1] * layer_lengths[2]))
             z2 = math.floor((z % (layer_lengths[1] * layer_lengths[2])) / layer_lengths[2])
             z3 = math.floor(z % layer_lengths[2])
             topic = (z1, z2, z3)
+            
             word_topic_assignment[d_index][w_index] = topic
-
             # And increase the topic count
             increase_counts(topic, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d_index)
 
