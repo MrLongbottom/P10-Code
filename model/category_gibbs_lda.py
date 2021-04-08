@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from gibbs_utility import get_coherence, mean_topic_diff, get_topics, decrease_count, increase_count, \
     _conditional_distribution, cat_perplexity
+from model.save import Model
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -47,8 +48,9 @@ def gibbs_sampling_category(documents: List[np.ndarray], doc2category,
                             word_topic_assignment: List[List[int]]):
     """
     Takes a set of documents and samples a new topic for each word within each document.
+    :param doc_topic_count: the number of the times each topic is used within docs
     :param word_topic_assignment: A list of documents where each index is the given words topic
-    :param topic_count: the number of the times each topic is used
+    :param word_topic_count: the number of the times each topic is used within words
     :param documents: a list of documents with their word ids
     :param cat_topic: a matrix describing the number of times each topic within each category
     :param topic_word: a matrix describing the number of times each word within each topic
@@ -108,4 +110,6 @@ if __name__ == '__main__':
               " Perplexity: ", cat_perplexity(test_docs, category_topic_dist, topic_word_dist, wt_count, dt_count),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist),
               " Topic Diff: ", mean_topic_diff(topic_word_dist))
+    model = Model(num_topics, alpha, beta, category_topic_dist, topic_word_dist, "category")
+    model.save_model()
     print(get_topics(corpora, num_topics, topic_word_dist))
