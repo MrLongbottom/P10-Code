@@ -35,6 +35,7 @@ def training_function_category(config):
     alpha, beta, num_topics = config["alpha"], config["beta"], config["num_topics"]
     print("got to training")
     train_docs, test_docs, \
+    doc2category, \
     word_topic_assignment, \
     category_topic_dist, topic_word_dist, \
     word_topic_count, cat_topic_count = setup_category(alpha=alpha, beta=beta, num_topics=num_topics)
@@ -42,7 +43,7 @@ def training_function_category(config):
     for step in range(50):
         print(f"step: {step}")
         # Iterative training function - can be any arbitrary training procedure.
-        gibbs_sampling_category(train_docs,
+        gibbs_sampling_category(train_docs, doc2category,
                                 category_topic_dist, topic_word_dist,
                                 word_topic_count, cat_topic_count,
                                 word_topic_assignment)
@@ -59,9 +60,9 @@ if __name__ == '__main__':
     analysis = tune.run(
         training_function,
         config={
-            "alpha": tune.choice([0.001, 0.01, 0.1]),
-            "beta": tune.choice([0.01, 0.1]),
-            "num_topics": tune.grid_search([50, 60, 70, 80])
+            "alpha": tune.grid_search([0.01, 0.1]),
+            "beta": tune.grid_search([0.01, 0.1]),
+            "num_topics": tune.grid_search([90, 100])
         })
 
     print("Best config: ", analysis.get_best_config(metric="topic_coherence", mode="max"))

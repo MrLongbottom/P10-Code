@@ -39,7 +39,7 @@ def random_initialize(documents: List[np.ndarray], doc2category, num_categories:
     return wt_assignment, category_topic, topic_word, word_topic_c, cat_topic_c
 
 
-def gibbs_sampling_category(documents: List[np.ndarray],
+def gibbs_sampling_category(documents: List[np.ndarray], doc2category, 
                             cat_topic: np.ndarray,
                             topic_word: np.ndarray,
                             word_topic_count: np.ndarray,
@@ -74,12 +74,13 @@ def setup_category(alpha: float, beta: float, num_topics: int):
     doc2word = list(prepro_file_load("doc2word").items())
     dictionary = prepro_file_load('corpora')
     doc2category = prepro_file_load("doc2category")
+    num_categories = len(doc2category)
     D, W = (dictionary.num_docs, len(dictionary))
     train_docs, test_docs = train_test_split(doc2word, test_size=0.33)
 
     word_topic_assignment, category_topic_dist, topic_word_dist, word_topic_count, cat_topic_count = random_initialize(
         doc2word, doc2category, num_categories, W, num_topics, alpha, beta)
-    return train_docs, test_docs, word_topic_assignment, category_topic_dist, topic_word_dist, word_topic_count, cat_topic_count
+    return train_docs, test_docs, doc2category, word_topic_assignment, category_topic_dist, topic_word_dist, word_topic_count, cat_topic_count
 
 
 if __name__ == '__main__':
