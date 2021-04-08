@@ -59,7 +59,7 @@ def increase_counts(topics, middle_layers, middle_sums, topic_to_word, topic_to_
     for i, x in enumerate(middle_layers[d]):
         x[topics[i], topics[i + 1]] += 1
     for i, x in enumerate(middle_sums):
-        x[topics[i], topics[i + 1]] += 1
+        x[topics[i]] += 1
     topic_to_word[topics[len(topics) - 1], word] += 1
     topic_to_word_sums[topics[len(topics) - 1]] += 1
 
@@ -104,9 +104,14 @@ def gibbs_sampling(documents: List[np.ndarray],
             step2 = np.stack([np.multiply(x, step1.T) for x in divs[2]]).reshape((289, 60, 5))
             step3 = np.multiply(step2.T, divs[3])
 
-            z = np.random.multinomial(1, np.asarray(step3.flatten() / step3.sum())[0]).argmax()
-            # TODO find topic based on flattened number
-            topic = (math.floor(z / s2_num), z % s2_num)
+            flat = np.asarray(step3.flatten() / step3.sum())
+
+            z = np.random.multinomial(1, flat).argmax()
+            # TODO make work for any number of dimensions
+            z1 = math.floor(z / (layer_lengths[1] * layer_lengths[2]))
+            z2 = math.floor((z % (layer_lengths[1] * layer_lengths[2])) / layer_lengths[2])
+            z3 = math.floor(z % layer_lengths[2])
+            topic = (z1, z2, z3)
             word_topic_assignment[d_index][w_index] = topic
 
             # And increase the topic count
@@ -174,24 +179,6 @@ if __name__ == '__main__':
     #layer_lengths.append(K)
 
     word_topic_assignment, middle_layers, topic_to_word = random_initialize(doc2word)
-    """
-    # dump init files
-    with open('wta.pickle', "wb") as file:
-        pickle.dump(word_topic_assignment, file)
-    with open('middle_counts_csc.pickle', "wb") as file:
-        pickle.dump(middle_counts, file)
-    with open('s2.pickle', "wb") as file:
-        pickle.dump(s2, file)
-    """
-    """
-    # load init files
-    with open('wta.pickle', 'rb') as file:
-        word_topic_assignment = pickle.load(file)
-    with open('middle_counts.pickle', 'rb') as file:
-        middle_counts = pickle.load(file)
-    with open('s2.pickle', 'rb') as file:
-        s2 = pickle.load(file)
-    """
 
     # things needed to calculate coherence
     doc2bow, texts = prepro_file_load('doc2bow', folder_name=folder), \
@@ -199,8 +186,8 @@ if __name__ == '__main__':
 
     print("Starting Gibbs")
     for i in range(0, iterationNum):
-        gibbs_sampling(doc2word, word_topic_assignment, middle_counts, s2)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed",
-              "Coherence: ", get_coherence(doc2bow, texts, corpora, s2_num, s2))
+        gibbs_sampling(doc2word, word_topic_assignment, middle_layers, topic_to_word)
+        #print(time.strftime('%X'), "Iteration: ", i, " Completed",
+        #      "Coherence: ", get_coherence(doc2bow, texts, corpora, s2_num, s2))
 
-    print(get_topics(corpora, s2_num, s2))
+    #print(get_topics(corpora, s2_num, s2))
