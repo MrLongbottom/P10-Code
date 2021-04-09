@@ -75,45 +75,55 @@ def gibbs_sampling(documents: List[np.ndarray],
     :param topic_to_word: a matrix describing the number of times each word within each topic
     """
 
-    # TODO alpha estimations
-    # s0_alphas = np.divide(s0_topic, np.sum(s0_topic))
-    # s1_alphas = np.divide(s0_topic, np.sum(s0_topic))
-    # tax = doc2tax[d_index]
+    # TODO alpha estimations (might not be needed?)
     topic_to_word_sums = topic_to_word.sum(axis=1)
 
     for d_index, doc in tqdm(documents):
         # TODO account for already assigned documents / words
-        doc_tax = doc2tax[d_index]
+        tax_ids = doc2tax[d_index]
+        tax = tax2topic_id(tax_ids)
+
+        if len(tax) == len(layer_lengths):
+            continue
 
         middle_sums = [x.sum(axis=1) for x in middle_layers[d_index]]
 
         for w_index, word in enumerate(doc):
+
             # Find the topic for the given word a decrease the topic count
             topic = wta[d_index][w_index]
             decrease_counts(topic, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d_index)
 
             divs = []
-            divs.append(np.divide(middle_sums[0] + alpha, len(doc) + (layer_lengths[0] * alpha)))
+            if len(tax) == 0:
+                divs.append(np.divide(middle_sums[0] + alpha, len(doc) + (layer_lengths[0] * alpha)))
             for i in range(len(middle_sums)):
-                divs.append(np.divide((middle_layers[d_index][i] + alpha).T, (middle_sums[i] + (layer_lengths[i+1] * alpha))))
-            divs.append(np.divide(topic_to_word[:, word] + alpha, topic_to_word_sums + (M * beta)))
+                if len(tax) < i+2:
+                    divs.append(np.divide((middle_layers[d_index][i] + alpha).T, (middle_sums[i] + (layer_lengths[i+1] * alpha))))
+            if len(tax) < len(layer_lengths):
+                divs.append(np.divide(topic_to_word[:, word] + alpha, topic_to_word_sums + (M * beta)))
 
             # TODO make work for any number of dimensions (currently only working with 3 middle layers)
-            step1 = np.einsum('i,ji->ji', divs[0], divs[1])
-            step2 = np.einsum('ij,jk->kji', divs[2], step1)
-            step3 = np.einsum('ijk,k->ijk', step2, divs[3])
+            if len(tax) == 0:
+                step1 = np.einsum('i,ji->ji', divs[0], divs[1])
+                step2 = np.einsum('ij,jk->kji', divs[2], step1)
+                step_final = np.einsum('ijk,k->ijk', step2, divs[3])
+            elif len(tax) == 1:
+                step1 = divs[0][:,tax[0]]
+                step2 = np.einsum('i,ji->ij', step1, divs[1])
+                step_final = np.einsum('ij,j->ij', step2, divs[2])
+            elif len(tax) == 2:
+                step1 = divs[0][:,tax[1]]
+                step_final = np.einsum('i,i->i', step1, divs[1])
 
-            flat = np.asarray(step3.flatten() / step3.sum())
+            flat = np.asarray(step_final.flatten() / step_final.sum())
             z = np.random.multinomial(1, flat)
+
             # TODO make work for any number of dimensions (currently only working with 3 middle layers)
-            z = z.reshape(layer_lengths)
-
-            #z1 = z.argmax(axis=1).argmax(axis=1).argmax()
-            #z2 = z.argmax(axis=0).argmax(axis=1).argmax()
-            #z3 = z.argmax(axis=0).argmax(axis=0).argmax()
-            #topic = (z1, z2, z3)
-
-            topic = tuple([x[0] for x in np.where(z == z.max())])
+            z = z.reshape(layer_lengths[len(tax):])
+            topic = [x for x in tax]
+            topic.extend([x[0] for x in np.where(z == z.max())])
+            topic = tuple(topic)
 
             word_topic_assignment[d_index][w_index] = topic
             # And increase the topic count
@@ -131,8 +141,8 @@ def tax2topic_id(tax_id_list):
         elif len(topic_ids) < mid_layers_num and tax_name in struct_root[len(topic_ids)]:
             topic_ids.append(struct_root[len(topic_ids)].index(tax_name))
         else:
-            return topic_ids
-    return topic_ids
+            return topic_ids[:len(layer_lengths)]
+    return topic_ids[:len(layer_lengths)]
 
 
 def taxonomy_structure(layers):
