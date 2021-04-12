@@ -1,4 +1,5 @@
 import random
+from collections import Counter
 
 import preprocess.preprocessing as pre
 
@@ -22,15 +23,16 @@ if __name__ == '__main__':
     doc2raw = pre.prepro_file_load('doc2raw_text', folder_name='full')
     id2doc = pre.prepro_file_load('id2doc', folder_name='full')
     doc2author = pre.prepro_file_load('doc2author', folder_name='full')
+    doc2category = pre.prepro_file_load('doc2category', folder_name='full')
 
     id2category = pre.prepro_file_load('id2category', folder_name='full')
-    doc2meta = pre.prepro_file_load('doc2category', folder_name='full')
-    value = "26. Frederik"
+    # doc2meta = pre.prepro_file_load('doc2category', folder_name='full')
+    # value = "26. Frederik"
     id2author = pre.prepro_file_load('id2author', folder_name='full')
-    # doc2meta = pre.prepro_file_load('doc2author', folder_name='full')
-    # value = "Villy Dall"
+    doc2meta = pre.prepro_file_load('doc2author', folder_name='full')
+    value = "Villy Dall"
 
-    metaID = find_id_from_value(id2category, value)
+    metaID = find_id_from_value(id2author, value)
 
     # get document IDs for documents with the given metadata
     documentIDs = []
@@ -41,18 +43,32 @@ if __name__ == '__main__':
     documents = {}
     documentsRaw = {}
     docAuthors = {}
+    docCategories = {}
     docFileNames = {}
     # get data based on document IDs
     for docID in documentIDs:
         documents[docID] = doc2pre[docID]
         documentsRaw[docID] = doc2raw[docID]
         docAuthors[docID] = doc2author[docID]
+        docCategories[docID] = doc2category[docID]
         docFileNames[docID] = id2doc[docID]
 
     # document list information
     print(f"{len(documents)} documents found\n")
-    print(f"{len(set(docAuthors.values()))} unique authors: ")
-    print(f"{[id2author[id] for id in set(docAuthors.values())]}\n")
+
+    uniqueAuthors = set(docAuthors.values())
+    uniqueAuthorCount = Counter(docAuthors.values())
+    authorCountPairs = [(author, uniqueAuthorCount[author]) for author in uniqueAuthors]
+    sortedAuthorCountPairs = sorted(authorCountPairs, key=lambda pair: pair[1], reverse=True)
+    print(f"{len(uniqueAuthors)} unique authors: ")
+    print(f"{[(id2author[pair[0]], pair[1]) for pair in sortedAuthorCountPairs]}\n")
+
+    uniqueCategories = set(docCategories.values())
+    uniqueCategoryCount = Counter(docCategories.values())
+    categoryCountPairs = [(category, uniqueCategoryCount[category]) for category in uniqueCategories]
+    sortedCategoryCountPairs = sorted(categoryCountPairs, key=lambda pair: pair[1], reverse=True)
+    print(f"{len(uniqueCategories)} unique categories: ")
+    print(f"{[(id2category[pair[0]], pair[1]) for pair in sortedCategoryCountPairs]}\n")
 
     # random examples of documents with ID, author, preprocessed data, and raw data
     print("10 random documents:")
@@ -60,6 +76,7 @@ if __name__ == '__main__':
         id = random.choice(documentIDs)
         print(f"ID: {id}")
         print(f"Author: {id2author[docAuthors[id]]}")
+        print(f"Category: {id2category[docCategories[id]]}")
         print(f"File name: {docFileNames[id]}")
         print(documents[id])
         print(documentsRaw[id] + "\n")
