@@ -72,8 +72,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
 
-    cat2id, categories, auth2id, authors, tax2id, taxonomies = construct_metadata([categories, authors, taxonomies],
-                                                                                  bad_ids)
+    cat2id, categories, auth2id, authors, tax2id, taxonomies = construct_metadata([categories, authors, taxonomies])
     
     doc_cat_one_hot = torch.zeros((len(documents), len(cat2id)))
     for i, doc in enumerate(documents):
@@ -106,7 +105,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     return corpora, documents, doc2bow, doc_word_matrix
 
   
-def construct_metadata(meta, bad_ids):
+def construct_metadata(meta):
     categories, authors, taxonomies = meta
 
     # Filter meta data mappings:
@@ -126,7 +125,7 @@ def construct_metadata(meta, bad_ids):
     for v in taxonomies.values():
         for tax in v.split('/'):
             distribution[tax] = distribution.get(tax, 0) + 1
-    bad_cat = [k for k, v in distribution.items() if v < 4]
+    bad_cat = [k for k, v in distribution.items() if v < 14]
     taxonomies = {k: '/'.join([x for x in v.split('/') if x not in bad_cat]) for k, v in taxonomies.items()}
 
     # make value -> id mappings
