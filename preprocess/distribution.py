@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 import preprocess.preprocessing as pre
 import matplotlib.pyplot as plt
@@ -5,8 +7,8 @@ from collections import Counter
 
 
 def get_distribution(meta_data_name: str):
-    doc2meta = pre.prepro_file_load(f'doc2{meta_data_name}')
-    id2meta = pre.prepro_file_load(f'id2{meta_data_name}')
+    doc2meta = pre.prepro_file_load(f'doc2{meta_data_name}', folder_name="full")
+    id2meta = pre.prepro_file_load(f'id2{meta_data_name}', folder_name="full")
     distribution = {}
     for k, v in doc2meta.items():
         distribution[v] = distribution.get(v, 0) + 1
@@ -50,6 +52,29 @@ def print_pie_chart(meta_data):
     plt.show()
 
 
+def print_latex_table(distribution: dict, columns: int = 4):
+    sorted_dict = {k: v for k, v in sorted(distribution.items(), key=lambda item: item[1], reverse=True)}
+    number_of_items = len(sorted_dict)
+    items_per_column = math.ceil(number_of_items / columns)
+
+    latex_table = []
+    # generate table based on given distribution values and number of columns
+    for index, item in enumerate(sorted_dict.items()):
+        latexItem = f"{item[0]} & {item[1]}"
+        if index < items_per_column:
+            latex_table.append(latexItem)
+        else:
+            latex_table[index % items_per_column] += " & " + latexItem
+
+    # add required end of row characters and print row
+    for index, row in enumerate(latex_table):
+        if latex_table[index].count('&') < (columns * 2) - 1:
+            latex_table[index] += " & & \\\\"
+        else:
+            latex_table[index] += " \\\\"
+        print(latex_table[index])
+
+
 # This file is meant to analyse and visualize various aspects of the dataset
 if __name__ == '__main__':
     meta_data = "author"
@@ -71,3 +96,5 @@ if __name__ == '__main__':
     names = [str(x) for x in sizes]
     fig1, ax1 = plt.subplots()
     print_histogram(meta_data)
+
+    print_latex_table(distribution, columns=4)
