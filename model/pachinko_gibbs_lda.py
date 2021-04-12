@@ -12,6 +12,7 @@ from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics
 from preprocess.preprocessing import prepro_file_load
 import math
 
+
 def random_initialize(documents):
     """
     Randomly initialisation of the word topics
@@ -76,16 +77,19 @@ def gibbs_sampling(documents: List[np.ndarray],
     """
 
     # TODO alpha estimations (might not be needed?)
+    # sum calculated to be used later
     topic_to_word_sums = topic_to_word.sum(axis=1)
 
     for d_index, doc in tqdm(documents):
-        # TODO account for already assigned documents / words
+        # find existing taxonomy
         tax_ids = doc2tax[d_index]
         tax = tax2topic_id(tax_ids)
 
+        # if already full, skip document, as it will just stay in that taxonomy
         if len(tax) == len(layer_lengths):
             continue
 
+        # sims calculated to be used later
         middle_sums = [x.sum(axis=1) for x in middle_layers[d_index]]
 
         for w_index, word in enumerate(doc):
@@ -94,6 +98,7 @@ def gibbs_sampling(documents: List[np.ndarray],
             topic = wta[d_index][w_index]
             decrease_counts(topic, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d_index)
 
+            # Pachinko Equation (pachinko paper, bottom of page four, extended to three layers)
             divs = []
             if len(tax) == 0:
                 divs.append(np.divide(middle_sums[0] + alpha, len(doc) + (layer_lengths[0] * alpha)))
@@ -104,6 +109,7 @@ def gibbs_sampling(documents: List[np.ndarray],
                 divs.append(np.divide(topic_to_word[:, word] + alpha, topic_to_word_sums + (M * beta)))
 
             # TODO make work for any number of dimensions (currently only working with 3 middle layers)
+            # Multiply divs together (skip any where taxonomy is already known)
             if len(tax) == 0:
                 step1 = np.einsum('i,ji->ji', divs[0], divs[1])
                 step2 = np.einsum('ij,jk->kji', divs[2], step1)
@@ -116,21 +122,27 @@ def gibbs_sampling(documents: List[np.ndarray],
                 step1 = divs[0][:,tax[1]]
                 step_final = np.einsum('i,i->i', step1, divs[1])
 
+            # convert matrix into flat array to sample a taxonomy combination
             flat = np.asarray(step_final.flatten() / step_final.sum())
             z = np.random.multinomial(1, flat)
 
-            # TODO make work for any number of dimensions (currently only working with 3 middle layers)
+            # reshape to find the chosen taxonomy combination
             z = z.reshape(layer_lengths[len(tax):])
             topic = [x for x in tax]
             topic.extend([x[0] for x in np.where(z == z.max())])
             topic = tuple(topic)
 
+            # Assign and increase topic count
             word_topic_assignment[d_index][w_index] = topic
-            # And increase the topic count
             increase_counts(topic, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d_index)
 
 
 def tax2topic_id(tax_id_list):
+    """
+    Convert taxonomy id list into id's in taxonomy tree structure
+    :param tax_id_list: list of taxonomy id's
+    :return:
+    """
     topic_ids = []
     for tax in tax_id_list:
         tax_name = id2tax[tax]
@@ -173,10 +185,11 @@ def taxonomy_structure(layers):
 
 if __name__ == '__main__':
     # TODO implement third layer?
-    folder = '2017'
+    folder = 'full'
     mid_layers_num = 3
     alpha = 0.1
     beta = 0.1
+    # number of topics
     K = 80
     iterationNum = 10
     doc2tax = prepro_file_load("doc2taxonomy", folder_name=folder)
@@ -184,11 +197,13 @@ if __name__ == '__main__':
 
     corpora = prepro_file_load("corpora", folder_name=folder)
     doc2word = list(prepro_file_load("doc2word", folder_name=folder).items())
+    # number of docs and words
     N, M = (corpora.num_docs, len(corpora))
 
+    # taxonomy tree structure
     root, struct_root = taxonomy_structure(mid_layers_num)
+    # tree layer sizes
     layer_lengths = [len(x) for x in struct_root]
-    #layer_lengths.append(K)
 
     word_topic_assignment, middle_layers, topic_to_word = random_initialize(doc2word)
 
