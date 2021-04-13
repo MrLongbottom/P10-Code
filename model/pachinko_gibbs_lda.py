@@ -5,6 +5,7 @@ from typing import List
 from scipy import sparse
 import numpy as np
 from tqdm import tqdm
+import random
 
 import utility
 from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics, decrease_count, increase_count, \
@@ -31,8 +32,14 @@ def random_initialize(documents):
         tax = tax2topic_id(tax_ids)
         currdoc = []
         for w in doc:
-            # generate missing topic parts
-            word_tax = [x for x in tax]
+            # randomly choose a taxonomy chain if there are multiple
+            if len(tax) > 1:
+                word_tax = [x for x in tax[random.randrange(len(tax))]]
+            elif len(tax) == 1:
+                word_tax = [x for x in tax[0]]
+            else:
+                word_tax = []
+
             while len(word_tax) < len(layer_lengths):
                 word_tax.append(np.random.randint(layer_lengths[len(word_tax)]))
             z = tuple(word_tax)
@@ -86,13 +93,20 @@ def gibbs_sampling(documents: List[np.ndarray],
         tax = tax2topic_id(tax_ids)
 
         # if already full, skip document, as it will just stay in that taxonomy
-        if len(tax) == len(layer_lengths):
+        if len(tax) == 1 and len(tax[0]) == len(layer_lengths):
             continue
 
         # sims calculated to be used later
         middle_sums = [x.sum(axis=1) for x in middle_layers[d_index]]
 
         for w_index, word in enumerate(doc):
+            # randomly choose a taxonomy chain if there are multiple
+            if len(tax) > 1:
+                word_tax = tax[random.randrange(len(tax))]
+            elif len(tax) == 1:
+                word_tax = tax[0]
+            else:
+                word_tax = []
 
             # Find the topic for the given word a decrease the topic count
             topic = wta[d_index][w_index]
@@ -100,35 +114,35 @@ def gibbs_sampling(documents: List[np.ndarray],
 
             # Pachinko Equation (pachinko paper, bottom of page four, extended to three layers)
             divs = []
-            if len(tax) == 0:
+            if len(word_tax) == 0:
                 divs.append(np.divide(middle_sums[0] + alpha, len(doc) + (layer_lengths[0] * alpha)))
             for i in range(len(middle_sums)):
-                if len(tax) < i+2:
+                if len(word_tax) < i+2:
                     divs.append(np.divide((middle_layers[d_index][i] + alpha).T, (middle_sums[i] + (layer_lengths[i+1] * alpha))))
-            if len(tax) < len(layer_lengths):
+            if len(word_tax) < len(layer_lengths):
                 divs.append(np.divide(topic_to_word[:, word] + alpha, topic_to_word_sums + (M * beta)))
 
             # TODO make work for any number of dimensions (currently only working with 3 middle layers)
             # Multiply divs together (skip any where taxonomy is already known)
-            if len(tax) == 0:
+            if len(word_tax) == 0:
                 step1 = np.einsum('i,ji->ji', divs[0], divs[1])
                 step2 = np.einsum('ij,jk->kji', divs[2], step1)
                 step_final = np.einsum('ijk,k->ijk', step2, divs[3])
-            elif len(tax) == 1:
-                step1 = divs[0][:,tax[0]]
+            elif len(word_tax) == 1:
+                step1 = divs[0][:,word_tax[0]]
                 step2 = np.einsum('i,ji->ij', step1, divs[1])
                 step_final = np.einsum('ij,j->ij', step2, divs[2])
-            elif len(tax) == 2:
-                step1 = divs[0][:,tax[1]]
+            elif len(word_tax) == 2:
+                step1 = divs[0][:,word_tax[1]]
                 step_final = np.einsum('i,i->i', step1, divs[1])
 
-            # convert matrix into flat array to sample a taxonomy combination
+            # convert matrix into flat array to sample a word_taxonomy combination
             flat = np.asarray(step_final.flatten() / step_final.sum())
             z = np.random.multinomial(1, flat)
 
-            # reshape to find the chosen taxonomy combination
-            z = z.reshape(layer_lengths[len(tax):])
-            topic = [x for x in tax]
+            # reshape to find the chosen word_taxonomy combination
+            z = z.reshape(layer_lengths[len(word_tax):])
+            topic = [x for x in word_tax]
             topic.extend([x[0] for x in np.where(z == z.max())])
             topic = tuple(topic)
 
@@ -141,20 +155,21 @@ def tax2topic_id(tax_id_list):
     """
     Convert taxonomy id list into id's in taxonomy tree structure
     :param tax_id_list: list of taxonomy id's
-    :return:
+    :return: list of taxonomy id's in the taxonomy tree structure (aka. topic id's)
     """
     topic_ids = []
+    curr_list = -1
     for tax in tax_id_list:
         tax_name = id2tax[tax]
         if tax_name == '':
             return topic_ids
-        if tax_name in struct_root[0]:
-            topic_ids.append(struct_root[0].index(tax_name))
-        elif len(topic_ids) < mid_layers_num and tax_name in struct_root[len(topic_ids)]:
-            topic_ids.append(struct_root[len(topic_ids)].index(tax_name))
-        else:
-            return topic_ids[:len(layer_lengths)]
-    return topic_ids[:len(layer_lengths)]
+        elif tax_name in struct_root[0]:
+            topic_ids.append([struct_root[0].index(tax_name)])
+            curr_list += 1
+        elif tax_name in struct_root[len(topic_ids)] and curr_list != -1 and len(topic_ids[curr_list]) < mid_layers_num:
+            topic_ids[curr_list].append(struct_root[len(topic_ids)].index(tax_name))
+    topic_ids = [x[:mid_layers_num] for x in topic_ids]
+    return topic_ids
 
 
 def taxonomy_structure(layers):
@@ -184,13 +199,13 @@ def taxonomy_structure(layers):
 
 
 if __name__ == '__main__':
-    # TODO implement third layer?
-    folder = 'full'
-    mid_layers_num = 3
+    random.seed()
+    folder = 'meta_full'
+    mid_layers_num = 2
     alpha = 0.1
     beta = 0.1
     # number of topics
-    K = 80
+    K = 90
     iterationNum = 10
     doc2tax = prepro_file_load("doc2taxonomy", folder_name=folder)
     id2tax = prepro_file_load("id2taxonomy", folder_name=folder)
@@ -204,6 +219,7 @@ if __name__ == '__main__':
     root, struct_root = taxonomy_structure(mid_layers_num)
     # tree layer sizes
     layer_lengths = [len(x) for x in struct_root]
+    layer_lengths.append(K)
 
     word_topic_assignment, middle_layers, topic_to_word = random_initialize(doc2word)
 
