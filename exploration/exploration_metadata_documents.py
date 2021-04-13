@@ -18,6 +18,15 @@ def find_id_from_value(dictionary: dict, value: str):
         return id
 
 
+def print_meta_document_set_info(doc2found_meta: dict, id2meta: dict, meta_name: str):
+    unique_meta = set(doc2found_meta.values())
+    unique_meta_count = Counter(doc2found_meta.values())
+    meta_count_pairs = [(author, unique_meta_count[author]) for author in unique_meta]
+    sorted_meta_count_pairs = sorted(meta_count_pairs, key=lambda pair: pair[1], reverse=True)
+    print(f"{len(unique_meta)} unique {meta_name}: ")
+    print(f"{[(id2meta[pair[0]], pair[1]) for pair in sorted_meta_count_pairs]}\n")
+
+
 if __name__ == '__main__':
     doc2pre = pre.prepro_file_load('doc2pre_text', folder_name='full')
     doc2raw = pre.prepro_file_load('doc2raw_text', folder_name='full')
@@ -55,20 +64,8 @@ if __name__ == '__main__':
 
     # document list information
     print(f"{len(documents)} documents found\n")
-
-    uniqueAuthors = set(docAuthors.values())
-    uniqueAuthorCount = Counter(docAuthors.values())
-    authorCountPairs = [(author, uniqueAuthorCount[author]) for author in uniqueAuthors]
-    sortedAuthorCountPairs = sorted(authorCountPairs, key=lambda pair: pair[1], reverse=True)
-    print(f"{len(uniqueAuthors)} unique authors: ")
-    print(f"{[(id2author[pair[0]], pair[1]) for pair in sortedAuthorCountPairs]}\n")
-
-    uniqueCategories = set(docCategories.values())
-    uniqueCategoryCount = Counter(docCategories.values())
-    categoryCountPairs = [(category, uniqueCategoryCount[category]) for category in uniqueCategories]
-    sortedCategoryCountPairs = sorted(categoryCountPairs, key=lambda pair: pair[1], reverse=True)
-    print(f"{len(uniqueCategories)} unique categories: ")
-    print(f"{[(id2category[pair[0]], pair[1]) for pair in sortedCategoryCountPairs]}\n")
+    print_meta_document_set_info(docAuthors, id2author, "authors")
+    print_meta_document_set_info(docCategories, id2category, "categories")
 
     # random examples of documents with metadata information
     print("Random documents:")
