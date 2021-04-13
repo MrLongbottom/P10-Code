@@ -259,7 +259,7 @@ if __name__ == '__main__':
     for i in range(0, iterationNum):
         gibbs_sampling(doc2word, word_topic_assignment, middle_layers, topic_to_word)
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
-              "Coherence: ", get_coherence(doc2bow, texts, corpora, layer_lengths[2], topic_to_word))
+              "Coherence: ", get_coherence(doc2bow, corpora, texts, layer_lengths[2], topic_to_word))
 
     topic_words = get_topics(corpora, layer_lengths[2], topic_to_word)
     if K is None:
