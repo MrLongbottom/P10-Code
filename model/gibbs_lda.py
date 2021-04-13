@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 from gibbs_utility import increase_count, decrease_count, perplexity, get_coherence, get_topics, \
     _conditional_distribution
+from model.save import Model
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -89,4 +90,6 @@ if __name__ == '__main__':
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ",
               perplexity(test_docs, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist))
+    model = Model(num_topics, alpha, beta, document_topic_dist, topic_word_dist, "standard")
+    model.save_model()
     print(get_topics(corpora, num_topics, topic_word_dist))
