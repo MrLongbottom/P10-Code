@@ -26,7 +26,6 @@ def random_initialize(documents):
     topic_to_word = np.zeros([layer_lengths[len(layer_lengths)-1], M])
     word_topic_assignment = []
     for d, doc in tqdm(documents):
-        # TODO figure out how to sample from docs with multiple taxonomies
         mid_doc_layers = [np.zeros((layer_lengths[x], layer_lengths[x+1]), dtype=np.intc) for x in range(len(layer_lengths)-1)]
         tax_ids = doc2tax[d]
         tax = tax2topic_id(tax_ids)
@@ -86,6 +85,8 @@ def gibbs_sampling(documents: List[np.ndarray],
     # TODO alpha estimations (might not be needed?)
     # sum calculated to be used later
     topic_to_word_sums = topic_to_word.sum(axis=1)
+    letters = ['a', 'b', 'c', 'd']
+    letters = {layer_lengths[i]: letters[i] for i in range(len(layer_lengths))}
 
     for d_index, doc in tqdm(documents):
         # find existing taxonomy
@@ -115,29 +116,53 @@ def gibbs_sampling(documents: List[np.ndarray],
             # Pachinko Equation (pachinko paper, bottom of page four, extended to three layers)
             divs = []
             if len(word_tax) == 0:
-                divs.append(np.divide(middle_sums[0] + alpha, len(doc) + (layer_lengths[0] * alpha)))
+                divs.append(np.divide((middle_sums[0] + alpha), len(doc) + (layer_lengths[0] * alpha)))
             for i in range(len(middle_sums)):
                 if len(word_tax) < i+2:
-                    divs.append(np.divide((middle_layers[d_index][i] + alpha).T, (middle_sums[i] + (layer_lengths[i+1] * alpha))))
+                    divs.append(np.divide((middle_layers[d_index][i] + alpha).T, (middle_sums[i] + (layer_lengths[i+1] * alpha))).T)
             if len(word_tax) < len(layer_lengths):
-                divs.append(np.divide(topic_to_word[:, word] + alpha, topic_to_word_sums + (M * beta)))
+                divs.append(np.divide((topic_to_word[:, word] + beta), topic_to_word_sums + (M * beta)))
 
             # TODO make work for any number of dimensions (currently only working with 3 middle layers)
             # Multiply divs together (skip any where taxonomy is already known)
-            if len(word_tax) == 0:
-                step1 = np.einsum('i,ji->ji', divs[0], divs[1])
-                step2 = np.einsum('ij,jk->kji', divs[2], step1)
-                step_final = np.einsum('ijk,k->ijk', step2, divs[3])
-            elif len(word_tax) == 1:
-                step1 = divs[0][:,word_tax[0]]
-                step2 = np.einsum('i,ji->ij', step1, divs[1])
-                step_final = np.einsum('ij,j->ij', step2, divs[2])
-            elif len(word_tax) == 2:
-                step1 = divs[0][:,word_tax[1]]
-                step_final = np.einsum('i,i->i', step1, divs[1])
+            steps = []
+            # if some of the taxonomy is already known
+            if len(word_tax) != 0:
+                for step in range(len(layer_lengths) - len(word_tax) + 1):
+                    if step == 0:
+                        if len(divs[len(word_tax)-1].shape) == 2:
+                            steps.append(divs[len(word_tax)-1][word_tax[len(word_tax)-1], :])
+                        elif len(divs[len(word_tax)-1].shape) == 1:
+                            steps.append(divs[len(word_tax)-1][word_tax[len(word_tax)-1]])
+                        else:
+                            print("fuck")
+                        continue
+                    else:
+                        start = steps[step-1]
+                    end = divs[step]
+                    letters1 = [letters[x] for x in start.shape]
+                    letters2 = [letters[x] for x in end.shape]
+                    letters3 = [x for x in letters1]
+                    letters3.extend(letters2)
+                    letters3 = list(set(letters3))
+                    steps.append(np.einsum(''.join(letters1) + ',' + ''.join(letters2) + '->' + ''.join(letters3), start, end))
+            # if taxonomy is not known
+            else:
+                for step in range(len(layer_lengths)):
+                    if step == 0:
+                        start = divs[0]
+                    else:
+                        start = steps[step-1]
+                    end = divs[step+1]
+                    letters1 = [letters[x] for x in start.shape]
+                    letters2 = [letters[x] for x in end.shape]
+                    letters3 = [x for x in letters1]
+                    letters3.extend(letters2)
+                    letters3 = list(set(letters3))
+                    steps.append(np.einsum(''.join(letters1) + ',' + ''.join(letters2) + '->' + ''.join(letters3), start, end))
 
             # convert matrix into flat array to sample a word_taxonomy combination
-            flat = np.asarray(step_final.flatten() / step_final.sum())
+            flat = np.asarray(steps[len(steps)-1].flatten() / steps[len(steps)-1].sum())
             z = np.random.multinomial(1, flat)
 
             # reshape to find the chosen word_taxonomy combination
@@ -200,16 +225,18 @@ def taxonomy_structure(layers):
 
 if __name__ == '__main__':
     random.seed()
-    folder = 'meta_full'
-    mid_layers_num = 2
+    folder = 'full'
     alpha = 0.1
     beta = 0.1
-    # number of topics
-    K = 90
     iterationNum = 10
+    # number of "empty" topics in bottom layer
+    # if 'None' no bottom layer of empty topic will be added
+    K = 90
+    # number of layers to take from taxonomy tree
+    mid_layers_num = 2
+
     doc2tax = prepro_file_load("doc2taxonomy", folder_name=folder)
     id2tax = prepro_file_load("id2taxonomy", folder_name=folder)
-
     corpora = prepro_file_load("corpora", folder_name=folder)
     doc2word = list(prepro_file_load("doc2word", folder_name=folder).items())
     # number of docs and words
@@ -219,7 +246,8 @@ if __name__ == '__main__':
     root, struct_root = taxonomy_structure(mid_layers_num)
     # tree layer sizes
     layer_lengths = [len(x) for x in struct_root]
-    layer_lengths.append(K)
+    if K is not None:
+        layer_lengths.append(K)
 
     word_topic_assignment, middle_layers, topic_to_word = random_initialize(doc2word)
 
@@ -234,6 +262,6 @@ if __name__ == '__main__':
               "Coherence: ", get_coherence(doc2bow, texts, corpora, layer_lengths[2], topic_to_word))
 
     topic_words = get_topics(corpora, layer_lengths[2], topic_to_word)
-    # Enable if last layer is a taxonomy layer rather than a created topic layer
-    # topic_words = {struct_root[2][i]: topic_words[i] for i in range(len(topic_words))}
+    if K is None:
+        topic_words = {struct_root[mid_layers_num-1][i]: topic_words[i] for i in range(len(topic_words))}
     print(topic_words)
