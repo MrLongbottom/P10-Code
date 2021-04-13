@@ -30,7 +30,7 @@ if __name__ == '__main__':
     # value = "26. Frederik"
     id2author = pre.prepro_file_load('id2author', folder_name='full')
     doc2meta = pre.prepro_file_load('doc2author', folder_name='full')
-    value = "Villy Dall"
+    value = "System Administrator"
 
     metaID = find_id_from_value(id2author, value)
 
@@ -70,10 +70,13 @@ if __name__ == '__main__':
     print(f"{len(uniqueCategories)} unique categories: ")
     print(f"{[(id2category[pair[0]], pair[1]) for pair in sortedCategoryCountPairs]}\n")
 
-    # random examples of documents with ID, author, preprocessed data, and raw data
-    print("10 random documents:")
+    # random examples of documents with metadata information
+    print("Random documents:")
+    sampleIDs = random.sample(documentIDs, len(documentIDs))
     for count in range(10):
-        id = random.choice(documentIDs)
+        if count == len(sampleIDs):
+            break
+        id = sampleIDs[count]
         print(f"ID: {id}")
         print(f"Author: {id2author[docAuthors[id]]}")
         print(f"Category: {id2category[docCategories[id]]}")
