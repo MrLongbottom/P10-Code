@@ -40,7 +40,7 @@ def random_initialize(documents):
 
 
 def gibbs_sampling(documents: List[np.ndarray],
-                   cat_topic: np.ndarray,
+                   author_topic: np.ndarray,
                    topic_word: np.ndarray,
                    word_topic_count: np.ndarray,
                    doc_topic_count: np.ndarray,
@@ -51,7 +51,7 @@ def gibbs_sampling(documents: List[np.ndarray],
     :param word_topic_assignment: A list of documents where each index is the given words topic
     :param word_topic_count: the number of the times each topic is used within words
     :param documents: a list of documents with their word ids
-    :param cat_topic: a matrix describing the number of times each topic within each category
+    :param author_topic: a matrix describing the number of times each topic is used for each author
     :param topic_word: a matrix describing the number of times each word within each topic
     """
     for d_index, doc in documents:
@@ -59,16 +59,16 @@ def gibbs_sampling(documents: List[np.ndarray],
         for w_index, word in enumerate(doc):
             # Find the topic for the given word a decrease the topic count
             topic = word_topic_assignment[d_index][w_index]
-            decrease_count(topic, topic_word, cat_topic, a_index, word, word_topic_count, doc_topic_count)
+            decrease_count(topic, topic_word, author_topic, a_index, word, word_topic_count, doc_topic_count)
 
-            # Sample a new topic based on cat_topic and topic word
+            # Sample a new topic based on author_topic and topic word
             # and assign it to the word we are working with
-            pz = _conditional_distribution(a_index, word, topic_word, cat_topic, word_topic_count, doc_topic_count)
+            pz = _conditional_distribution(a_index, word, topic_word, author_topic, word_topic_count, doc_topic_count)
             topic = np.random.multinomial(1, pz).argmax()
             word_topic_assignment[d_index][w_index] = topic
 
             # And increase the topic count
-            increase_count(topic, topic_word, cat_topic, a_index, word, word_topic_count, doc_topic_count)
+            increase_count(topic, topic_word, author_topic, a_index, word, word_topic_count, doc_topic_count)
 
 
 if __name__ == '__main__':
@@ -97,6 +97,6 @@ if __name__ == '__main__':
               x_perplexity(test_docs, author_topic_dist, topic_word_dist, wt_count, dt_count, doc2author),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist),
               " Topic Diff: ", mean_topic_diff(topic_word_dist))
-    model = Model(num_topics, alpha, beta, author_topic_dist, topic_word_dist, "category")
+    model = Model(num_topics, alpha, beta, author_topic_dist, topic_word_dist, "author")
     model.save_model()
     print(get_topics(corpora, num_topics, topic_word_dist))
