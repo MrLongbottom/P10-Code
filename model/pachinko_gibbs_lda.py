@@ -234,5 +234,6 @@ if __name__ == '__main__':
               "Coherence: ", get_coherence(doc2bow, texts, corpora, layer_lengths[2], topic_to_word))
 
     topic_words = get_topics(corpora, layer_lengths[2], topic_to_word)
-    topic_words = {struct_root[2][i]: topic_words[i] for i in range(len(topic_words))}
+    # Enable if last layer is a taxonomy layer rather than a created topic layer
+    # topic_words = {struct_root[2][i]: topic_words[i] for i in range(len(topic_words))}
     print(topic_words)
