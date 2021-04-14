@@ -97,7 +97,7 @@ def gibbs_sampling(documents: List[np.ndarray],
         if len(tax) == 1 and len(tax[0]) == len(layer_lengths):
             continue
 
-        # sims calculated to be used later
+        # sums calculated to be used later
         middle_sums = [x.sum(axis=1) for x in middle_layers[d_index]]
 
         for w_index, word in enumerate(doc):
