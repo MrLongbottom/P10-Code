@@ -123,7 +123,6 @@ def gibbs_sampling(documents: List[np.ndarray],
             if len(word_tax) < len(layer_lengths):
                 divs.append(np.divide((topic_to_word[:, word] + beta), topic_to_word_sums + (M * beta)))
 
-            # TODO make work for any number of dimensions (currently only working with 3 middle layers)
             # Multiply divs together (skip any where taxonomy is already known)
             steps = []
             # if some of the taxonomy is already known
