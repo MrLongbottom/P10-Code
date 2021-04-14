@@ -1,14 +1,14 @@
 import pickle
 import time
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from gibbs_utility import increase_count, decrease_count, perplexity, get_coherence, get_topics, \
-    _conditional_distribution
-from model.save import Model
+    _conditional_distribution, topic_diff, mean_topic_diff
+from model.save import Model, load_model
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -66,21 +66,38 @@ def gibbs_sampling(documents: List[np.ndarray],
             increase_count(topic, topic_word, doc_topic, d_index, word, word_topic_count, doc_topic_count)
 
 
+def compute_metrics_on_saved_model(save_model: str or Model, test_documents):
+    """
+    Compute the three metrics (perplexity, coherence and topic diff) on a saved model
+    :param save_model: the name of the model
+    :param test_documents: the test documents we want to test on
+    :return: a dict containing the results
+    """
+    if type(save_model) == str:
+        loaded_model = load_model(save_model)
+    else:
+        loaded_model = save_model
+    model_perplexity = perplexity(test_documents, loaded_model.doc_topic, loaded_model.topic_word,
+                                  loaded_model.topic_word_count,
+                                  loaded_model.doc_topic_count)
+    model_coherence = get_coherence(doc2bow, dictionary, texts, num_topics, loaded_model.topic_word)
+    model_topic_difference = mean_topic_diff(loaded_model.topic_word)
+    return {"perplexity": model_perplexity,
+            "coherence": model_coherence,
+            "topic_diff": model_topic_difference}
+
+
 if __name__ == '__main__':
-    alpha = 0.1
+    alpha = 0.01
     beta = 0.1
     iterationNum = 50
-    num_topics = 10
-    with open("../preprocess/generated_files/corpora", 'rb') as file:
-        corpora = pickle.load(file)
+    num_topics = 90
     doc2word = list(prepro_file_load("doc2word").items())
-    D, W = (corpora.num_docs, len(corpora))
-
-    train_docs, test_docs = train_test_split(doc2word, test_size=0.33)
-
-    # things needed to calculate coherence
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
         prepro_file_load('doc2pre_text').values())
+    D, W = (dictionary.num_docs, len(dictionary))
+
+    train_docs, test_docs = train_test_split(doc2word, test_size=0.33)
 
     word_topic_assignment, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count = random_initialize(
         doc2word)
@@ -89,7 +106,8 @@ if __name__ == '__main__':
                        word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ",
               perplexity(test_docs, document_topic_dist, topic_word_dist, word_topic_count, doc_topic_count),
-              " Coherence: ", get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist))
-    model = Model(num_topics, alpha, beta, document_topic_dist, topic_word_dist, "standard")
+              " Coherence: ", get_coherence(doc2bow, dictionary, texts, num_topics, topic_word_dist))
+    model = Model(num_topics, alpha, beta, document_topic_dist, topic_word_dist, doc_topic_count, word_topic_count,
+                  "standard")
     model.save_model()
-    print(get_topics(corpora, num_topics, topic_word_dist))
+    print(get_topics(dictionary, num_topics, topic_word_dist))
