@@ -45,7 +45,7 @@ def perplexity(documents: List[np.ndarray], dt_dist, tw_dist, word_topic_c, doc_
     return np.exp(ll / (-n))
 
 
-def cat_perplexity(documents: List[np.ndarray], ct_dist, tw_dist, word_topic_c, doc_topic_c) -> float:
+def x_perplexity(documents: List[np.ndarray], ct_dist, tw_dist, word_topic_c, doc_topic_c, x) -> float:
     """
     Calculates the perplexity based on the documents given
     :param documents: a list of documents with word ids
@@ -53,11 +53,10 @@ def cat_perplexity(documents: List[np.ndarray], ct_dist, tw_dist, word_topic_c, 
     """
     n = 0
     ll = 0.0
-    doc2category = prepro_file_load("doc2category")
     for d, doc in documents:
-        cat = doc2category[d]
+        feature = x[d]
         for w in doc:
-            ll += np.log(((tw_dist[:, w] / word_topic_c) * (ct_dist[cat, :] / doc_topic_c[cat])).sum())
+            ll += np.log(((tw_dist[:, w] / word_topic_c) * (ct_dist[feature, :] / doc_topic_c[feature])).sum())
             n += 1
     return np.exp(ll / (-n))
 
