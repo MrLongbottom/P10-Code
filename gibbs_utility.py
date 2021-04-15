@@ -30,7 +30,7 @@ def mean_topic_diff(topic_word_dist):
     return np.mean(td)
 
 
-def perplexity(documents: List[np.ndarray], dt_dist, tw_dist, word_topic_c, doc_topic_c) -> float:
+def perplexity(documents: List[np.ndarray],  document_topic, document_topic_count, topic_word, topic_word_c) -> float:
     """
     Calculates the perplexity based on the documents given
     :param documents: a list of documents with word ids
@@ -40,12 +40,12 @@ def perplexity(documents: List[np.ndarray], dt_dist, tw_dist, word_topic_c, doc_
     ll = 0.0
     for d, doc in documents:
         for w in doc:
-            ll += np.log(((tw_dist[:, w] / word_topic_c) * (dt_dist[d, :] / doc_topic_c[d])).sum())
+            ll += np.log(((topic_word[:, w] / topic_word_c) * (document_topic[d, :] / document_topic_count[d])).sum())
             n += 1
     return np.exp(ll / (-n))
 
 
-def x_perplexity(documents: List[np.ndarray], ct_dist, tw_dist, word_topic_c, doc_topic_c, x) -> float:
+def x_perplexity(documents: List[np.ndarray], feature_topic, feature_topic_c, topic_word, topic_word_c, doc2feature) -> float:
     """
     Calculates the perplexity based on the documents given
     :param documents: a list of documents with word ids
@@ -54,9 +54,9 @@ def x_perplexity(documents: List[np.ndarray], ct_dist, tw_dist, word_topic_c, do
     n = 0
     ll = 0.0
     for d, doc in documents:
-        feature = x[d]
+        feature = doc2feature[d]
         for w in doc:
-            ll += np.log(((tw_dist[:, w] / word_topic_c) * (ct_dist[feature, :] / doc_topic_c[feature])).sum())
+            ll += np.log(((topic_word[:, w] / topic_word_c) * (feature_topic[feature, :] / feature_topic_c[feature])).sum())
             n += 1
     return np.exp(ll / (-n))
 
@@ -83,23 +83,23 @@ def get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_di
                      texts=texts)
 
 
-def increase_count(topic, topic_word, doc_topic, d_index, word, wt_count, dt_count):
-    doc_topic[d_index, topic] += 1
+def increase_count(feature1, word, topic, feature1_topic, feature1_topic_c, topic_word, topic_word_c):
+    feature1_topic[feature1, topic] += 1
+    feature1_topic_c[feature1] += 1
     topic_word[topic, word] += 1
-    wt_count[topic] += 1
-    dt_count[d_index] += 1
+    topic_word_c[topic] += 1
 
 
-def decrease_count(topic, topic_word, doc_topic, d_index, word, wt_count, dt_count):
-    doc_topic[d_index, topic] -= 1
+def decrease_count(feature1, word, topic, feature1_topic, feature1_topic_c, topic_word, topic_word_c):
+    feature1_topic[feature1, topic] -= 1
+    feature1_topic_c[feature1] -= 1
     topic_word[topic, word] -= 1
-    wt_count[topic] -= 1
-    dt_count[d_index] -= 1
+    topic_word_c[topic] -= 1
 
 
-def _conditional_distribution(d_index, word, topic_word, doc_topic, word_topic_count, doc_topic_count):
-    left = np.divide(topic_word[:, word], word_topic_count)
-    right = np.divide(doc_topic[d_index, :], doc_topic_count[d_index])
+def _conditional_distribution(doc_index, word, doc_topic, doc_topic_count, topic_word, topic_word_count):
+    left = np.divide(topic_word[:, word], topic_word_count)
+    right = np.divide(doc_topic[doc_index, :], doc_topic_count[doc_index])
     p_z = np.multiply(left, right)
     # normalize to obtain probabilities
     p_z /= np.sum(p_z)
