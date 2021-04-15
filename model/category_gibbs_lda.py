@@ -29,7 +29,7 @@ def random_initialize(documents):
         cat = doc2category[d_index]
         for word in doc:
             pz = _conditional_distribution(cat, word, topic_word, category_topic, word_topic_c, cat_topic_c)
-            topic = np.random.multinomial(1, pz / pz.sum()).argmax()
+            topic = np.random.multinomial(1, pz).argmax()
             curr_doc.append(topic)
             category_topic[cat, topic] += 1
             topic_word[topic, word] += 1

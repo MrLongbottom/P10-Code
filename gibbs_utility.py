@@ -99,8 +99,19 @@ def decrease_count(topic, topic_word, doc_topic, d_index, word, wt_count, dt_cou
 
 def _conditional_distribution(d_index, word, topic_word, doc_topic, word_topic_count, doc_topic_count):
     left = np.divide(topic_word[:, word], word_topic_count)
-    right = np.divide(doc_topic[d_index, :],  doc_topic_count[d_index])
+    right = np.divide(doc_topic[d_index, :], doc_topic_count[d_index])
     p_z = np.multiply(left, right)
+    # normalize to obtain probabilities
+    p_z /= np.sum(p_z)
+    return p_z
+
+
+def _conditional_distribution_combination(author, category, word, author_topic, author_topic_count,
+                                          category_topic, category_topic_count, topic_word, topic_word_count):
+    left = np.divide(topic_word[:, word], topic_word_count)
+    middle = np.divide(category_topic[category, :], category_topic_count[category])
+    right = np.divide(author_topic[author, :], author_topic_count[author])
+    p_z = np.multiply(left, middle, right)
     # normalize to obtain probabilities
     p_z /= np.sum(p_z)
     return p_z

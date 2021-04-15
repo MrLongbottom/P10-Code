@@ -29,7 +29,7 @@ def random_initialize(documents):
         author = doc2author[d_index]
         for word in doc:
             pz = _conditional_distribution(author, word, topic_word, author_topic, word_topic_c, author_topic_c)
-            topic = np.random.multinomial(1, pz / pz.sum()).argmax()
+            topic = np.random.multinomial(1, pz).argmax()
             curr_doc.append(topic)
             author_topic[author, topic] += 1
             topic_word[topic, word] += 1
