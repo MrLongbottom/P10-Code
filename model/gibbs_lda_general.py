@@ -82,7 +82,7 @@ if __name__ == '__main__':
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
         prepro_file_load('doc2pre_text').values())
     D, W = (dictionary.num_docs, len(dictionary))
-    train_docs, test_docs = train_test_split(doc2word, test_size=0.33, shuffle=True)
+    train_docs, test_docs = train_test_split(doc2word, test_size=0.33, random_state=1337)
 
     word_topic_assignment, feature_topic, feature_topic_c, topic_word, topic_word_c = random_initialize(doc2word)
 
