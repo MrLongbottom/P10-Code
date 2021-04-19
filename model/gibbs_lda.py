@@ -76,7 +76,7 @@ if __name__ == '__main__':
         prepro_file_load('doc2pre_text').values())
     D, W = (dictionary.num_docs, len(dictionary))
 
-    train_docs, test_docs = train_test_split(doc2word, test_size=0.33)
+    train_docs, test_docs = train_test_split(doc2word, test_size=0.33, random_state=1337)
 
     word_topic_assignment, document_topic, document_topic_count, topic_word, topic_word_c = random_initialize(doc2word)
     for i in tqdm(range(0, iterationNum)):
