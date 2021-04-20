@@ -127,10 +127,10 @@ def triple_perplexity(documents: List[np.ndarray],
 
 
 if __name__ == '__main__':
-    alpha = 0.1
+    alpha = 0.01
     beta = 0.1
     iterationNum = 50
-    num_topics = 10
+    num_topics = 90
     doc2author = prepro_file_load("doc2author")
     doc2category = prepro_file_load("doc2category")
     num_authors = len(set(list(doc2author.values())))

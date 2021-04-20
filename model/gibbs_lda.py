@@ -72,7 +72,7 @@ def gibbs_sampling(documents: List[np.ndarray],
 if __name__ == '__main__':
     alpha = 0.1
     beta = 0.1
-    iterationNum = 1
+    iterationNum = 50
     num_topics = 10
     doc2word = list(prepro_file_load("doc2word").items())
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
