@@ -64,12 +64,15 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     texts = {k: v for i, (k, v) in enumerate(texts.items()) if i not in empty_docs}
     id2doc_file = {k: v for i, (k, v) in enumerate(id2doc_file.items()) if i not in empty_docs}
 
+    # fix document IDs after removing empty documents
+    texts = {i: v for i, v in zip(range(len(texts.values())), list(texts.values()))}
+    id2doc_file = {i: v for i, v in zip(range(len(id2doc_file.values())), list(id2doc_file.values()))}
+
     doc2bow = make_doc2bow(corpora, documents)
 
     doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
 
-    cat2id, categories, auth2id, authors, tax2id, taxonomies = construct_metadata([categories, authors, taxonomies],
-                                                                                  bad_ids)
+    cat2id, categories, auth2id, authors, tax2id, taxonomies = construct_metadata([categories, authors, taxonomies])
     
     doc_cat_one_hot = torch.zeros((len(documents), len(cat2id)))
     for i, doc in enumerate(documents):
@@ -102,15 +105,14 @@ def preprocessing(json_file, printouts=False, save=True, folder_name=""):
     return corpora, documents, doc2bow, doc_word_matrix
 
   
-def construct_metadata(meta, bad_ids):
+def construct_metadata(meta):
     categories, authors, taxonomies = meta
 
     # Filter meta data mappings:
-    """
     distribution = {}
     for v in categories.values():
         distribution[v] = distribution.get(v, 0) + 1
-    bad_cat = [k for k, v in distribution.items() if v < 140]
+    bad_cat = [k for k, v in distribution.items() if v < 139]
     categories = {k: v if v not in bad_cat else 'misc' for k, v in categories.items()}
 
     distribution = {}
@@ -119,13 +121,12 @@ def construct_metadata(meta, bad_ids):
     bad_cat = [k for k, v in distribution.items() if v < 14]
     authors = {k: v if v not in bad_cat else 'misc' for k, v in authors.items()}
 
-    # TODO taxonomy needs to be reworked into smaller parts, when we want to work with it.
-    #distribution = {}
-    #for v in taxonomies.values():
-    #    distribution[v] = distribution.get(v, 0) + 1
-    #bad_cat = [k for k, v in distribution.items() if v < 140]
-    #taxonomies = {k: v if v not in bad_cat else 'misc' for k, v in taxonomies.items()}
-    """
+    distribution = {}
+    for v in taxonomies.values():
+        for tax in v.split('/'):
+            distribution[tax] = distribution.get(tax, 0) + 1
+    bad_cat = [k for k, v in distribution.items() if v < 14]
+    taxonomies = {k: '/'.join([x for x in v.split('/') if x not in bad_cat]) for k, v in taxonomies.items()}
 
     # make value -> id mappings
     cat2id = {v: i for v, i in zip(list(set(categories.values())), range(len(set(categories.values()))))}

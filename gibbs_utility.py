@@ -6,6 +6,7 @@ from scipy.spatial import distance
 import numpy as np
 
 # supported measures = {'u_mass', 'c_v', 'c_uci', 'c_npmi'}
+from model.save import Model, load_model
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -30,7 +31,7 @@ def mean_topic_diff(topic_word_dist):
     return np.mean(td)
 
 
-def perplexity(documents: List[np.ndarray], dt_dist, tw_dist, word_topic_c, doc_topic_c) -> float:
+def perplexity(documents: List[np.ndarray],  document_topic, document_topic_count, topic_word, topic_word_c) -> float:
     """
     Calculates the perplexity based on the documents given
     :param documents: a list of documents with word ids
@@ -40,12 +41,12 @@ def perplexity(documents: List[np.ndarray], dt_dist, tw_dist, word_topic_c, doc_
     ll = 0.0
     for d, doc in documents:
         for w in doc:
-            ll += np.log(((tw_dist[:, w] / word_topic_c) * (dt_dist[d, :] / doc_topic_c[d])).sum())
+            ll += np.log(((topic_word[:, w] / topic_word_c) * (document_topic[d, :] / document_topic_count[d])).sum())
             n += 1
     return np.exp(ll / (-n))
 
 
-def cat_perplexity(documents: List[np.ndarray], ct_dist, tw_dist, word_topic_c, doc_topic_c) -> float:
+def x_perplexity(documents: List[np.ndarray], feature_topic, feature_topic_c, topic_word, topic_word_c, doc2feature) -> float:
     """
     Calculates the perplexity based on the documents given
     :param documents: a list of documents with word ids
@@ -53,11 +54,10 @@ def cat_perplexity(documents: List[np.ndarray], ct_dist, tw_dist, word_topic_c, 
     """
     n = 0
     ll = 0.0
-    doc2category = prepro_file_load("doc2category")
     for d, doc in documents:
-        cat = doc2category[d]
+        feature = doc2feature[d]
         for w in doc:
-            ll += np.log(((tw_dist[:, w] / word_topic_c) * (ct_dist[cat, :] / doc_topic_c[cat])).sum())
+            ll += np.log(((topic_word[:, w] / topic_word_c) * (feature_topic[feature, :] / feature_topic_c[feature])).sum())
             n += 1
     return np.exp(ll / (-n))
 
@@ -78,30 +78,65 @@ def get_topics(corpora, num_topics, topic_word_dist, num_of_word_per_topic: int 
         topic_words.append(topic_word[0: min(num_of_word_per_topic, len(topic_word))])
     return topic_words
 
-
+  
 def get_coherence(doc2bow, texts, corpora, num_topics, topic_word_dist):
     return coherence(topics=get_topics(corpora, num_topics, topic_word_dist), doc2bow=doc2bow, dictionary=corpora,
                      texts=texts)
 
 
-def increase_count(topic, topic_word, doc_topic, d_index, word, wt_count, dt_count):
-    doc_topic[d_index, topic] += 1
+def increase_count(feature1, word, topic, feature1_topic, feature1_topic_c, topic_word, topic_word_c):
+    feature1_topic[feature1, topic] += 1
+    feature1_topic_c[feature1] += 1
     topic_word[topic, word] += 1
-    wt_count[topic] += 1
-    dt_count[d_index] += 1
+    topic_word_c[topic] += 1
 
 
-def decrease_count(topic, topic_word, doc_topic, d_index, word, wt_count, dt_count):
-    doc_topic[d_index, topic] -= 1
+def decrease_count(feature1, word, topic, feature1_topic, feature1_topic_c, topic_word, topic_word_c):
+    feature1_topic[feature1, topic] -= 1
+    feature1_topic_c[feature1] -= 1
     topic_word[topic, word] -= 1
-    wt_count[topic] -= 1
-    dt_count[d_index] -= 1
+    topic_word_c[topic] -= 1
 
 
-def _conditional_distribution(d_index, word, topic_word, doc_topic, word_topic_count, doc_topic_count):
-    left = np.divide(topic_word[:, word], word_topic_count)
-    right = np.divide(doc_topic[d_index, :],  doc_topic_count[d_index])
+def _conditional_distribution(doc_index, word, doc_topic, doc_topic_count, topic_word, topic_word_count):
+    left = np.divide(topic_word[:, word], topic_word_count)
+    right = np.divide(doc_topic[doc_index, :], doc_topic_count[doc_index])
     p_z = np.multiply(left, right)
     # normalize to obtain probabilities
     p_z /= np.sum(p_z)
     return p_z
+
+  
+def _conditional_distribution_combination(author, category, word, author_topic, author_topic_count,
+                                          category_topic, category_topic_count, topic_word, topic_word_count):
+    left = np.divide(topic_word[:, word], topic_word_count)
+    middle = np.divide(category_topic[category, :], category_topic_count[category])
+    right = np.divide(author_topic[author, :], author_topic_count[author])
+    p_z = np.multiply(left, middle, right)
+    # normalize to obtain probabilities
+    p_z /= np.sum(p_z)
+    return p_z
+
+  
+def compute_metrics_on_saved_model(save_model: str or Model, test_documents):
+    """
+    Compute the three metrics (perplexity, coherence and topic diff) on a saved model
+    :param save_model: the name of the model
+    :param test_documents: the test documents we want to test on
+    :return: a dict containing the results
+    """
+    if type(save_model) == str:
+        loaded_model = load_model(save_model)
+    else:
+        loaded_model = save_model
+
+    doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
+        prepro_file_load('doc2pre_text').values())
+    model_perplexity = perplexity(test_documents, loaded_model.doc_topic, loaded_model.topic_word,
+                                  loaded_model.topic_word_count,
+                                  loaded_model.doc_topic_count)
+    model_coherence = get_coherence(doc2bow, dictionary, texts, save_model.num_topics, loaded_model.topic_word)
+    model_topic_difference = mean_topic_diff(loaded_model.topic_word)
+    return {"perplexity": model_perplexity,
+            "coherence": model_coherence,
+            "topic_diff": model_topic_difference}
