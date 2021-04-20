@@ -91,8 +91,8 @@ if __name__ == '__main__':
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
               " Perplexity: ",
               x_perplexity(test_docs, feature_topic, feature_topic_c, topic_word, topic_word_c, doc2feature),
-              " Coherence: ", get_coherence(doc2bow, dictionary, texts, dictionary, num_topics, topic_word),
+              " Coherence: ", get_coherence(doc2bow, dictionary, texts, num_topics, topic_word),
               " Topic Diff: ", mean_topic_diff(topic_word))
-    model = Model(num_topics, alpha, beta, feature_topic, topic_word, feature)
+    model = Model(num_topics, alpha, beta, feature_topic, feature_topic_c, topic_word, topic_word_c, feature)
     model.save_model()
     print(get_topics(dictionary, num_topics, topic_word))

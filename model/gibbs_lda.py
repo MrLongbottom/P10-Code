@@ -81,15 +81,13 @@ if __name__ == '__main__':
 
     train_docs, test_docs = train_test_split(doc2word, test_size=0.33, random_state=1337)
 
-
     word_topic_assignment, document_topic, document_topic_count, topic_word, topic_word_c = random_initialize(doc2word)
     for i in tqdm(range(0, iterationNum)):
         gibbs_sampling(train_docs, document_topic, document_topic_count, topic_word, topic_word_c,
                        word_topic_assignment)
         print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ",
               perplexity(test_docs, document_topic, document_topic_count, topic_word, topic_word_c),
-              " Coherence: ", get_coherence(doc2bow, dictionary, texts, dictionary, num_topics, topic_word))
-    model = Model(num_topics, alpha, beta, document_topic_dist, topic_word_dist, doc_topic_count, word_topic_count,
-                  "standard")
+              " Coherence: ", get_coherence(doc2bow, dictionary, texts, num_topics, topic_word))
+    model = Model(num_topics, alpha, beta, document_topic, document_topic_count, topic_word, topic_word_c, "standard")
     model.save_model()
-    print(get_topics(dictionary, num_topics, topic_word_dist))
+    print(get_topics(dictionary, num_topics, topic_word))
