@@ -21,7 +21,6 @@ def random_initialize(documents):
     :return: word_topic_assignment,
     """
     print("Random Initilization")
-    np.random.seed()
     middle_layers = [[] for _ in range(N)]
     topic_to_word = np.zeros([layer_lengths[len(layer_lengths)-1], M])
     word_topic_assignment = []
@@ -70,18 +69,11 @@ def increase_counts(topics, middle_layers, middle_sums, topic_to_word, topic_to_
     topic_to_word_sums[topics[len(topics) - 1]] += 1
 
 
-def gibbs_sampling(documents: List[np.ndarray],
-                   wta,
-                   middle_layers,
-                   topic_to_word):
+def gibbs_sampling(documents: List[np.ndarray],):
     """
     Takes a set of documents and samples a new topic for each word within each document.
-    :param middle_layers:
-    :param wta: Word-Topic-Assignments. A list of documents where each index is the given words topic
     :param documents: a list of documents with their word ids
-    :param topic_to_word: a matrix describing the number of times each word within each topic
     """
-
     # TODO alpha estimations (might not be needed?)
     # sum calculated to be used later
     topic_to_word_sums = topic_to_word.sum(axis=1)
@@ -98,7 +90,7 @@ def gibbs_sampling(documents: List[np.ndarray],
             continue
 
         # sums calculated to be used later
-        middle_sums = [x.sum(axis=1) for x in middle_layers[d_index]]
+        middle_sums = [np.sum(x, axis=1) for x in middle_layers[d_index]]
 
         for w_index, word in enumerate(doc):
             # randomly choose a taxonomy chain if there are multiple
@@ -110,7 +102,7 @@ def gibbs_sampling(documents: List[np.ndarray],
                 word_tax = []
 
             # Find the topic for the given word a decrease the topic count
-            topic = wta[d_index][w_index]
+            topic = word_topic_assignment[d_index][w_index]
             decrease_counts(topic, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d_index)
 
             # Pachinko Equation (pachinko paper, bottom of page four, extended to three layers)
@@ -224,6 +216,7 @@ def taxonomy_structure(layers):
 
 if __name__ == '__main__':
     random.seed()
+    np.random.seed()
     folder = 'full'
     alpha = 0.1
     beta = 0.1
@@ -256,11 +249,18 @@ if __name__ == '__main__':
 
     print("Starting Gibbs")
     for i in range(0, iterationNum):
-        gibbs_sampling(doc2word, word_topic_assignment, middle_layers, topic_to_word)
+        gibbs_sampling(doc2word)
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
-              "Coherence: ", get_coherence(doc2bow, texts, corpora, layer_lengths[2], topic_to_word))
+              "Coherence: ", get_coherence(doc2bow, texts, corpora, layer_lengths[len(layer_lengths)-1], topic_to_word))
 
-    topic_words = get_topics(corpora, layer_lengths[2], topic_to_word)
+    topic_words = get_topics(corpora, layer_lengths[len(layer_lengths)-1], topic_to_word)
     if K is None:
         topic_words = {struct_root[mid_layers_num-1][i]: topic_words[i] for i in range(len(topic_words))}
     print(topic_words)
+
+    with open("wta.pickle", "wb") as file:
+        pickle.dump(word_topic_assignment, file)
+    with open("middle.pickle", "wb") as file:
+        pickle.dump(middle_layers, file)
+    with open("topic_word.pickle", "wb") as file:
+        pickle.dump(topic_words, file)
