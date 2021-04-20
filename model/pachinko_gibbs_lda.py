@@ -220,7 +220,7 @@ if __name__ == '__main__':
     folder = 'full'
     alpha = 0.1
     beta = 0.1
-    iterationNum = 10
+    iterationNum = 2
     # number of "empty" topics in bottom layer
     # if 'None' no bottom layer of empty topic will be added
     K = 90
@@ -251,7 +251,7 @@ if __name__ == '__main__':
     for i in range(0, iterationNum):
         gibbs_sampling(doc2word)
         print(time.strftime('%X'), "Iteration: ", i, " Completed",
-              "Coherence: ", get_coherence(doc2bow, texts, corpora, layer_lengths[len(layer_lengths)-1], topic_to_word))
+              "Coherence: ", get_coherence(doc2bow, corpora, texts, layer_lengths[len(layer_lengths)-1], topic_to_word))
 
     topic_words = get_topics(corpora, layer_lengths[len(layer_lengths)-1], topic_to_word)
     if K is None:

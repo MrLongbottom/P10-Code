@@ -79,8 +79,8 @@ def get_topics(corpora, num_topics, topic_word_dist, num_of_word_per_topic: int 
     return topic_words
 
 
-def get_coherence(doc2bow, texts, corpora, num_topics, topic_word_dist):
-    return coherence(topics=get_topics(corpora, num_topics, topic_word_dist), doc2bow=doc2bow, dictionary=corpora,
+def get_coherence(doc2bow, dictionary, texts, num_topics, topic_word_dist):
+    return coherence(topics=get_topics(dictionary, num_topics, topic_word_dist), doc2bow=doc2bow, dictionary=dictionary,
                      texts=texts)
 
 
