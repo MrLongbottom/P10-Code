@@ -6,6 +6,7 @@ from scipy.spatial import distance
 import numpy as np
 
 # supported measures = {'u_mass', 'c_v', 'c_uci', 'c_npmi'}
+from model.save import Model, load_model
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -78,8 +79,8 @@ def get_topics(corpora, num_topics, topic_word_dist, num_of_word_per_topic: int 
     return topic_words
 
 
-def get_coherence(doc2bow, dictionary, texts, corpora, num_topics, topic_word_dist):
-    return coherence(topics=get_topics(corpora, num_topics, topic_word_dist), doc2bow=doc2bow, dictionary=dictionary,
+def get_coherence(doc2bow, dictionary, texts, num_topics, topic_word_dist):
+    return coherence(topics=get_topics(dictionary, num_topics, topic_word_dist), doc2bow=doc2bow, dictionary=dictionary,
                      texts=texts)
 
 
@@ -105,7 +106,7 @@ def _conditional_distribution(doc_index, word, doc_topic, doc_topic_count, topic
     p_z /= np.sum(p_z)
     return p_z
 
-
+  
 def _conditional_distribution_combination(author, category, word, author_topic, author_topic_count,
                                           category_topic, category_topic_count, topic_word, topic_word_count):
     left = np.divide(topic_word[:, word], topic_word_count)
@@ -115,3 +116,27 @@ def _conditional_distribution_combination(author, category, word, author_topic, 
     # normalize to obtain probabilities
     p_z /= np.sum(p_z)
     return p_z
+
+  
+def compute_metrics_on_saved_model(save_model: str or Model, test_documents):
+    """
+    Compute the three metrics (perplexity, coherence and topic diff) on a saved model
+    :param save_model: the name of the model
+    :param test_documents: the test documents we want to test on
+    :return: a dict containing the results
+    """
+    if type(save_model) == str:
+        loaded_model = load_model(save_model)
+    else:
+        loaded_model = save_model
+
+    doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
+        prepro_file_load('doc2pre_text').values())
+    model_perplexity = perplexity(test_documents, loaded_model.doc_topic, loaded_model.topic_word,
+                                  loaded_model.topic_word_count,
+                                  loaded_model.doc_topic_count)
+    model_coherence = get_coherence(doc2bow, dictionary, texts, save_model.num_topics, loaded_model.topic_word)
+    model_topic_difference = mean_topic_diff(loaded_model.topic_word)
+    return {"perplexity": model_perplexity,
+            "coherence": model_coherence,
+            "topic_diff": model_topic_difference}

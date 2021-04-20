@@ -2,12 +2,14 @@ import pickle
 
 
 class Model:
-    def __init__(self, num_topics, alpha, eta, doc_topic, topic_word, name):
+    def __init__(self, num_topics, alpha, eta, doc_topic, topic_word, doc_topic_count, topic_word_count, name):
         self.num_topics = num_topics
         self.alpha = alpha
         self.eta = eta
         self.doc_topic = doc_topic
         self.topic_word = topic_word
+        self.doc_topic_count = doc_topic_count
+        self.topic_word_count = topic_word_count
         self.name = name
 
     def to_dict(self):
@@ -15,7 +17,9 @@ class Model:
                 "alpha": self.alpha,
                 "eta": self.eta,
                 "doc_topic": self.doc_topic,
-                "topic_word": self.topic_word}
+                "topic_word": self.topic_word,
+                "doc_topic_count": self.doc_topic_count,
+                "topic_word_count": self.topic_word_count}
 
     def to_str(self):
         return f"{self.num_topics}_{self.alpha}_{self.eta}_{self.name}"
@@ -28,4 +32,12 @@ class Model:
 
 def load_model(load_path):
     with open(load_path, 'rb') as file_path:
-        return pickle.load(file_path)
+        dict_model = pickle.load(file_path)
+        return Model(dict_model["num_topic"],
+                     dict_model["alpha"],
+                     dict_model["eta"],
+                     dict_model["doc_topic"],
+                     dict_model["topic_word"],
+                     dict_model["doc_topic_count"],
+                     dict_model["topic_word_count"],
+                     file_path.name.split("_")[-1])
