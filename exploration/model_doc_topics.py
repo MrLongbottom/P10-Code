@@ -10,10 +10,10 @@ if __name__ == '__main__':
     doc2pre = pre.prepro_file_load('doc2pre_text', folder_name='full')
     doc2raw = pre.prepro_file_load('doc2raw_text', folder_name='full')
     model = load_model("../model/models/90_0.01_0.1_standard")
-    num_topics = model["num_topic"]
-    topic_word_dist = model["topic_word"]
+    num_topics = model.num_topics
+    topic_word_dist = model.topic_word
 
-    docs = dict(enumerate(model["doc_topic"]))
+    docs = dict(enumerate(model.doc_topic))
     docs = [(k, v) for k, v in docs.items()]  # convert to list of (ID, topics)
     sample_docs = random.sample(docs, 5)  # sample 5 random documents
     # convert topic probabilities to (ID, probability) pairs to know IDs after sorting
