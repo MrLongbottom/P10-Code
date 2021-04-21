@@ -72,10 +72,10 @@ def gibbs_sampling(documents: List[np.ndarray],
 
 if __name__ == '__main__':
     feature = "category"
-    alpha = 0.1
+    alpha = 0.01
     beta = 0.1
     iterationNum = 50
-    num_topics = 10
+    num_topics = 90
     doc2feature = prepro_file_load(f"doc2{feature}")
     num_feature = len(set(list(doc2feature.values())))
     doc2word = list(prepro_file_load("doc2word").items())
