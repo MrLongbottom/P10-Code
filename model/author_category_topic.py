@@ -1,4 +1,6 @@
-import pickle
+import time
+from typing import List
+
 import time
 from typing import List
 
@@ -6,9 +8,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
-from gibbs_utility import get_coherence, mean_topic_diff, get_topics, decrease_count, increase_count, \
-    _conditional_distribution, x_perplexity, _conditional_distribution_combination
-from model.save import Model
+from gibbs_utility import get_coherence, mean_topic_diff, get_topics, _conditional_distribution_combination
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -139,7 +139,7 @@ if __name__ == '__main__':
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
         prepro_file_load('doc2pre_text').values())
     D, W = (dictionary.num_docs, len(dictionary))
-    train_docs, test_docs = train_test_split(doc2word, test_size=0.33, shuffle=True)
+    train_docs, test_docs = train_test_split(doc2word, test_size=0.33, random_state=1337)
 
     word_topic_assignment, author_topic, author_topic_c, category_topic, category_topic_c, topic_word, topic_word_c = \
         random_initialize(doc2word)
@@ -156,6 +156,6 @@ if __name__ == '__main__':
                                 author_topic, author_topic_c,
                                 category_topic, category_topic_c,
                                 topic_word, topic_word_c),
-              " Coherence: ", get_coherence(doc2bow, dictionary, texts, dictionary, num_topics, topic_word),
+              " Coherence: ", get_coherence(doc2bow, dictionary, texts, num_topics, topic_word),
               " Topic Diff: ", mean_topic_diff(topic_word))
     print(get_topics(dictionary, num_topics, topic_word))
