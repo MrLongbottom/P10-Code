@@ -8,8 +8,7 @@ from tqdm import tqdm
 import random
 
 import utility
-from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics, decrease_count, increase_count, \
-    cat_perplexity
+from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics
 from preprocess.preprocessing import prepro_file_load
 import math
 
