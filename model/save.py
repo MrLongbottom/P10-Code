@@ -41,3 +41,15 @@ def load_model(load_path):
                      dict_model["doc_topic_count"],
                      dict_model["topic_word_count"],
                      file_path.name.split("_")[-1])
+
+
+def wrong_save_fix(load_path: str, save_path: str = ""):
+    wrong_model = load_model(load_path)
+    correct_model = Model(wrong_model.num_topics, wrong_model.alpha, wrong_model.eta, wrong_model.doc_topic,
+                          wrong_model.doc_topic_count, wrong_model.topic_word, wrong_model.topic_word_count,
+                          wrong_model.name)
+    correct_model.save_model(save_path)
+
+
+if __name__ == '__main__':
+    wrong_save_fix(load_path="models/90_0.01_0.1_author", save_path="models/")
