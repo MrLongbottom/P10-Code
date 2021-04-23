@@ -27,7 +27,9 @@ if __name__ == '__main__':
     corpora = pre.prepro_file_load("corpora", "full")
     doc2pre = pre.prepro_file_load('doc2pre_text', folder_name='full')
     doc2raw = pre.prepro_file_load('doc2raw_text', folder_name='full')
-    model_path = "../model/models/90_0.01_0.1_author"
+    id2category = pre.prepro_file_load('id2category', folder_name='full')
+    id2author = pre.prepro_file_load('id2author', folder_name='full')
+    model_path = "../model/models/90_0.01_0.1_category"
     model = load_model(model_path)
     model_type = model_path.split("_")[-1]
     num_topics = model.num_topics
@@ -52,8 +54,10 @@ if __name__ == '__main__':
             print(f"Document ID: {id}")
             print(doc2pre[id])
             print(doc2raw[id] + "\n")
-        else:
-            print(f"{model_type.capitalize()} model ID: {id}")
+        elif model_type == "category":
+            print(f"{model_type.capitalize()} ID: {id} ({id2category[id]})")
+        elif model_type == "author":
+            print(f"{model_type.capitalize()} ID: {id} ({id2author[id]})")
 
         if model_type == "standard":
             print("Top words in document top topics:")
