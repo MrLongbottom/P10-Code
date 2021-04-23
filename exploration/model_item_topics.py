@@ -5,6 +5,24 @@ from model.save import load_model
 from gibbs_utility import get_topics
 
 
+def sample_and_sort_items(model, num_docs: int = 5, num_top_topics: int = 3):
+    items = dict(enumerate(model.doc_topic))
+    items = [(k, v) for k, v in items.items()]  # convert to list of (ID, topics)
+    sample_items = random.sample(items, num_docs)  # sample 'num_docs' random documents
+    # convert topic probabilities to (ID, probability) pairs to know IDs after sorting
+    sample_items = [(item[0], [(index, topic) for index, topic in enumerate(item[1])]) for item in sample_items]
+
+    # sort topics in sampled docs and keep top 'num_top_topics' topics
+    sorted_item_topic = {}
+    for item in sample_items:
+        sorted_item_topic[item[0]] = sorted(item[1], key=lambda topic: topic[1], reverse=True)
+    item_top_topics = {}
+    for item in sorted_item_topic.items():
+        item_top_topics[item[0]] = [item[1][index] for index in range(num_top_topics)]
+
+    return item_top_topics
+
+
 if __name__ == '__main__':
     corpora = pre.prepro_file_load("corpora", "full")
     doc2pre = pre.prepro_file_load('doc2pre_text', folder_name='full')
@@ -15,20 +33,7 @@ if __name__ == '__main__':
     num_topics = model.num_topics
     topic_word_dist = model.topic_word
 
-    items = dict(enumerate(model.doc_topic))
-    items = [(k, v) for k, v in items.items()]  # convert to list of (ID, topics)
-    sample_items = random.sample(items, 5)  # sample 5 random documents
-    # convert topic probabilities to (ID, probability) pairs to know IDs after sorting
-    sample_items = [(item[0], [(index, topic) for index, topic in enumerate(item[1])]) for item in sample_items]
-
-    # sort topics in sampled docs and keep top 3 topics
-    sorted_item_topic = {}
-    for item in sample_items:
-        sorted_item_topic[item[0]] = sorted(item[1], key=lambda topic: topic[1], reverse=True)
-    item_top_topics = {}
-    for item in sorted_item_topic.items():
-        item_top_topics[item[0]] = [item[1][index] for index in range(3)]
-
+    item_top_topics = sample_and_sort_items(model)
     topic_top_words = get_topics(corpora, num_topics, topic_word_dist)
 
     # printing item-topic -> topic-word connections
