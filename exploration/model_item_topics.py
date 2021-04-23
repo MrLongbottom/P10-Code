@@ -46,8 +46,9 @@ if __name__ == '__main__':
     elif model_type == "author":
         print("Random authors with top topics:")
     else:
-        print("Model type not known!")
+        print(f"Model type '{model_type}' not known!")
         exit()
+
     for item in item_top_topics.items():
         id = item[0]
         if model_type == "standard":

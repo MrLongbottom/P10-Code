@@ -33,7 +33,7 @@ def print_meta_document_set_info(doc2found_meta: dict, id2meta: dict, meta_name:
     print(f"{[(id2meta[pair[0]], pair[1]) for pair in sorted_meta_count_pairs]}\n")
 
 
-if __name__ == '__main__':
+def print_metadata_documents(metadata_type: str, metadata_name: str, sample_size: int = 10):
     # load necessary data
     doc2pre = pre.prepro_file_load('doc2pre_text', folder_name='full')
     doc2raw = pre.prepro_file_load('doc2raw_text', folder_name='full')
@@ -45,15 +45,21 @@ if __name__ == '__main__':
     id2author = pre.prepro_file_load('id2author', folder_name='full')
     id2taxonomy = pre.prepro_file_load('id2taxonomy', folder_name='full')
 
-    # doc2meta = pre.prepro_file_load('doc2category', folder_name='full')
-    # value = "26. Frederik"
-    # doc2meta = pre.prepro_file_load('doc2author', folder_name='full')
-    # value = "System Administrator"
-    doc2meta = pre.prepro_file_load('doc2taxonomy', folder_name='full')
-    value = "EMNER"
+    if metadata_type == "category":
+        doc2meta = pre.prepro_file_load('doc2category', folder_name='full')
+        id2meta = id2category
+    elif metadata_type == "author":
+        doc2meta = pre.prepro_file_load('doc2author', folder_name='full')
+        id2meta = id2author
+    elif metadata_type == "taxonomy":
+        doc2meta = pre.prepro_file_load('doc2taxonomy', folder_name='full')
+        id2meta = id2taxonomy
+    else:
+        print(f"'{metadata_type}' not found!")
+        exit()
 
-    # get metadata ID from name
-    metaID = find_id_from_value(id2taxonomy, value)
+    # get metadata ID from name (examples: '26. Frederik', 'System Administrator', 'EMNER')
+    metaID = find_id_from_value(id2meta, metadata_name)
 
     # get document IDs for documents with the given metadata
     documentIDs = []
@@ -89,7 +95,7 @@ if __name__ == '__main__':
     # random examples of documents with metadata information
     print("Random documents:")
     sampleIDs = random.sample(documentIDs, len(documentIDs))
-    for count in range(10):
+    for count in range(sample_size):
         if count == len(sampleIDs):
             break
         id = sampleIDs[count]
@@ -100,3 +106,9 @@ if __name__ == '__main__':
         print(f"File name: {docFileNames[id]}")
         print(documents[id])
         print(documentsRaw[id] + "\n")
+
+
+if __name__ == '__main__':
+    # print_metadata_documents("category", "26. Frederik")
+    # print_metadata_documents("author", "System Administrator")
+    print_metadata_documents("taxonomy", "EMNER")
