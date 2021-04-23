@@ -2,6 +2,7 @@ import math
 import statistics
 
 from model.save import load_model
+import preprocess.preprocessing as pre
 
 
 def calculate_author_similarity(author_topic, i: int, j: int):
@@ -26,6 +27,7 @@ def calculate_author_similarities(author_topic):
 
 
 if __name__ == '__main__':
+    id2author = pre.prepro_file_load('id2author', folder_name='full')
     model_path = "../model/models/90_0.01_0.1_author"
     model = load_model(model_path)
 
@@ -46,4 +48,5 @@ if __name__ == '__main__':
     print(f"Median KL divergence: {'{:.2f}'.format(median_divergence)}\n")
     print("Top 10 author pairs based on symmetric KL divergence:")
     for pair in top_author_pairs:
-        print(f"Authors: {pair[0]}, KL divergence: {'{:.2f}'.format(pair[1])}")
+        authors = pair[0]
+        print(f"KL divergence: {'{:.2f}'.format(pair[1])}, Authors: {id2author[authors[0]], id2author[authors[1]]}")
