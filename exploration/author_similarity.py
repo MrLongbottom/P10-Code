@@ -26,6 +26,14 @@ def calculate_author_similarities(author_topic):
     return author_similarities
 
 
+def row_distribution_normalization(matrix):
+    normalized_matrix = matrix
+    for row in range(normalized_matrix.shape[0]):
+        row_sum = sum(normalized_matrix[row])
+        normalized_matrix[row] = [val/row_sum for val in normalized_matrix[row]]
+    return normalized_matrix
+
+
 if __name__ == '__main__':
     id2author = pre.prepro_file_load('id2author', folder_name='full')
     model_path = "../model/models/90_0.01_0.1_author"
@@ -33,9 +41,7 @@ if __name__ == '__main__':
 
     # Get author-topic distribution and normalize
     author_topic = model.doc_topic
-    for row in range(author_topic.shape[0]):
-        row_sum = sum(author_topic[row])
-        author_topic[row] = [val/row_sum for val in author_topic[row]]
+    author_topic = row_distribution_normalization(author_topic)
 
     author_similarities = calculate_author_similarities(author_topic)
     sorted_author_similarities = dict(sorted(author_similarities.items(), key=lambda item: item[1]))

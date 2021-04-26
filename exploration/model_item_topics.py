@@ -5,10 +5,10 @@ from model.save import load_model
 from gibbs_utility import get_topics
 
 
-def sample_and_sort_items(model, num_docs: int = 5, num_top_topics: int = 3):
+def sample_and_sort_items(model, num_items: int = 5, num_top_topics: int = 3):
     items = dict(enumerate(model.doc_topic))
     items = [(k, v) for k, v in items.items()]  # convert to list of (ID, topics)
-    sample_items = random.sample(items, num_docs)  # sample 'num_docs' random documents
+    sample_items = random.sample(items, num_items)  # sample 'num_items' random documents/categories/authors/etc.
     # convert topic probabilities to (ID, probability) pairs to know IDs after sorting
     sample_items = [(item[0], [(index, topic) for index, topic in enumerate(item[1])]) for item in sample_items]
 

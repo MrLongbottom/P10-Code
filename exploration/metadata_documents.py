@@ -5,17 +5,19 @@ from collections import Counter
 import preprocess.preprocessing as pre
 
 
-def find_id_from_value(dictionary: dict, value: str):
+def find_id_from_value(dictionary: dict, value: str, printouts: bool = True):
     id = None
     for key, val in dictionary.items():
         if value == val:
             id = key
 
     if id is None:
-        print(f"Did not find the value '{value}' in the metadata")
+        if printouts:
+            print(f"Did not find the value '{value}' in the metadata")
         exit()
     else:
-        print(f"Found '{value}' with ID: {id}")
+        if printouts:
+            print(f"Found '{value}' with ID: {id}")
         return id
 
 
