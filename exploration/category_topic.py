@@ -1,17 +1,9 @@
 import numpy as np
 
 from model.save import load_model
-from exploration.metadata_documents import find_id_from_value
-from author_similarity import row_distribution_normalization
+from utility import row_distribution_normalization, get_category_ids_from_names
 from gibbs_utility import get_topics
 import preprocess.preprocessing as pre
-
-
-def get_category_ids_from_names(id2category: dict, names: list):
-    category_ids = []
-    for name in names:
-        category_ids.append(find_id_from_value(id2category, name, printouts=False))
-    return category_ids
 
 
 def delete_rows_and_sort(matrix, ids):

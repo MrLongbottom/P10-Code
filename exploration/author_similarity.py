@@ -2,6 +2,7 @@ import math
 import statistics
 
 from model.save import load_model
+from utility import row_distribution_normalization
 import preprocess.preprocessing as pre
 
 
@@ -24,14 +25,6 @@ def calculate_author_similarities(author_topic):
                 author_similarities[(i, j)] = calculate_author_similarity(author_topic, i, j)
         cur_diagonal += 1
     return author_similarities
-
-
-def row_distribution_normalization(matrix):
-    normalized_matrix = matrix
-    for row in range(normalized_matrix.shape[0]):
-        row_sum = sum(normalized_matrix[row])
-        normalized_matrix[row] = [val / row_sum for val in normalized_matrix[row]]
-    return normalized_matrix
 
 
 if __name__ == '__main__':

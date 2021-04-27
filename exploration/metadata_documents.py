@@ -2,23 +2,8 @@ import random
 import itertools
 from collections import Counter
 
+from utility import find_id_from_value
 import preprocess.preprocessing as pre
-
-
-def find_id_from_value(dictionary: dict, value: str, printouts: bool = True):
-    id = None
-    for key, val in dictionary.items():
-        if value == val:
-            id = key
-
-    if id is None:
-        if printouts:
-            print(f"Did not find the value '{value}' in the metadata")
-        exit()
-    else:
-        if printouts:
-            print(f"Found '{value}' with ID: {id}")
-        return id
 
 
 def print_meta_document_set_info(doc2found_meta: dict, id2meta: dict, meta_name: str):
