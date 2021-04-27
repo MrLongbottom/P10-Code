@@ -30,14 +30,16 @@ def row_distribution_normalization(matrix):
     normalized_matrix = matrix
     for row in range(normalized_matrix.shape[0]):
         row_sum = sum(normalized_matrix[row])
-        normalized_matrix[row] = [val/row_sum for val in normalized_matrix[row]]
+        normalized_matrix[row] = [val / row_sum for val in normalized_matrix[row]]
     return normalized_matrix
 
 
 if __name__ == '__main__':
     id2author = pre.prepro_file_load('id2author', folder_name='full')
+    id2category = pre.prepro_file_load('id2category', folder_name='full')
     model_path = "../model/models/90_0.01_0.1_author"
     model = load_model(model_path)
+    model_type = model_path.split("_")[-1]
 
     # Get author-topic distribution and normalize
     author_topic = model.doc_topic
@@ -52,7 +54,15 @@ if __name__ == '__main__':
     # Print gathered information
     print(f"Max KL divergence: {'{:.2f}'.format(max_divergence)}")
     print(f"Median KL divergence: {'{:.2f}'.format(median_divergence)}\n")
-    print("Top 10 author pairs based on symmetric KL divergence:")
+    if model_type == "author":
+        print("Top 10 author pairs based on symmetric KL divergence:")
+    else:
+        print("Top 10 category pairs based on symmetric KL divergence:")
     for pair in top_author_pairs:
         authors = pair[0]
-        print(f"KL divergence: {'{:.2f}'.format(pair[1])}, Authors: {id2author[authors[0]], id2author[authors[1]]}")
+        if model_type == "author":
+            print(f"KL divergence: {'{:.2f}'.format(pair[1])}, "
+                  f"Authors: {id2author[authors[0]], id2author[authors[1]]}")
+        else:
+            print(f"KL divergence: {'{:.2f}'.format(pair[1])}, "
+                  f"Categories: {id2category[authors[0]], id2category[authors[1]]}")
