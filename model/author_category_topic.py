@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from gibbs_utility import get_coherence, mean_topic_diff, get_topics, _conditional_distribution_combination
+from model.save import MultiModel
 from preprocess.preprocessing import prepro_file_load
 
 
@@ -158,4 +159,10 @@ if __name__ == '__main__':
                                 topic_word, topic_word_c),
               " Coherence: ", get_coherence(doc2bow, dictionary, texts, num_topics, topic_word),
               " Topic Diff: ", mean_topic_diff(topic_word))
+        model = MultiModel(num_topics, alpha, beta,
+                           author_topic, author_topic_c,
+                           category_topic, category_topic_c,
+                           topic_word, topic_word_c,
+                           "author_category")
+        model.save_model()
     print(get_topics(dictionary, num_topics, topic_word))
