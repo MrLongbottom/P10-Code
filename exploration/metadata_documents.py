@@ -2,7 +2,9 @@ import random
 import itertools
 from collections import Counter
 
-from exploration_utility import find_id_from_value
+from exploration_utility import find_id_from_value, sample_and_sort_items
+from model.save import load_model
+from gibbs_utility import get_topics
 import preprocess.preprocessing as pre
 
 
@@ -20,7 +22,7 @@ def print_meta_document_set_info(doc2found_meta: dict, id2meta: dict, meta_name:
     print(f"{[(id2meta[pair[0]], pair[1]) for pair in sorted_meta_count_pairs]}\n")
 
 
-def print_metadata_documents(metadata_type: str, metadata_name: str, sample_size: int = 10):
+def print_metadata_documents(metadata_type: str, metadata_name: str, sample_size: int = 10, print_top_topics=False):
     # load necessary data
     doc2pre = pre.prepro_file_load('doc2pre_text', folder_name='full')
     doc2raw = pre.prepro_file_load('doc2raw_text', folder_name='full')
@@ -80,6 +82,14 @@ def print_metadata_documents(metadata_type: str, metadata_name: str, sample_size
     print_meta_document_set_info(docTaxonomies, id2taxonomy, "taxonomies")
 
     # random examples of documents with metadata information
+    if print_top_topics:
+        corpora = pre.prepro_file_load("corpora", "full")
+        model_path = "../model/models/90_0.01_0.1_category"
+        model = load_model(model_path)
+        num_topics = model.num_topics
+        topic_word_dist = model.topic_word
+        topic_top_words = get_topics(corpora, num_topics, topic_word_dist)
+
     print("Random documents:")
     sampleIDs = random.sample(documentIDs, len(documentIDs))
     for count in range(sample_size):
@@ -93,9 +103,16 @@ def print_metadata_documents(metadata_type: str, metadata_name: str, sample_size
         print(f"File name: {docFileNames[id]}")
         print(documents[id])
         print(documentsRaw[id] + "\n")
+        if print_top_topics:
+            item_top_topics = sample_and_sort_items(model, item_id=docCategories[id])
+            print(f"Top words in category top topics:")
+            for item in item_top_topics.items():
+                for topic in item[1]:
+                    print(f"Topic ID/probability: {topic[0]}/{'{:.2f}'.format(topic[1])} {topic_top_words[topic[0]]}")
+            print()
 
 
 if __name__ == '__main__':
-    # print_metadata_documents("category", "26. Frederik")
+    print_metadata_documents("category", "Sport-avis")
     # print_metadata_documents("author", "System Administrator")
-    print_metadata_documents("taxonomy", "EMNER")
+    # print_metadata_documents("taxonomy", "EMNER", print_top_topics=True)

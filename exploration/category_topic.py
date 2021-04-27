@@ -46,6 +46,11 @@ def print_top_topics_geographic_and_topical(num_top_topics: int = 20):
         set(list(sorted_geographic.keys())[:num_top_topics] + list(sorted_topical.keys())[:num_top_topics]))
     for topic in top_multiple_topics:
         top_unique_topics.remove(topic)
+    for index, topic in enumerate(top_unique_topics):
+        if topic in list(sorted_geographic.keys())[:num_top_topics]:
+            top_unique_topics[index] = ("geographic", top_unique_topics[index])
+        else:
+            top_unique_topics[index] = ("topical", top_unique_topics[index])
 
     topic_top_words = get_topics(corpora, num_topics, topic_word_dist)
 
@@ -70,7 +75,7 @@ def print_top_topics_geographic_and_topical(num_top_topics: int = 20):
     print()
     print("Unique topics:")
     for topic in top_unique_topics:
-        print(f"{topic}: {topic_top_words[topic]}")
+        print(f"{topic}: {topic_top_words[topic[1]]}")
 
 
 if __name__ == '__main__':

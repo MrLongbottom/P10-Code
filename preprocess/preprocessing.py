@@ -10,7 +10,7 @@ import pickle
 from exploration.exploration_utility import get_category_ids_from_names
 
 
-def preprocessing(json_file, printouts=False, save=True, folder_name="", filter_categories=False, cat_names=None):
+def preprocessing(json_file, printouts=False, save=True, folder_name="", cat_names=None):
     paths = utility.load_dict_file("../paths.csv")
 
     # load data file
@@ -18,7 +18,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name="", filter_
         print("Loading dataset")
     texts, categories, authors, taxonomies = load_document_file('../' + paths[json_file])
 
-    if filter_categories:
+    if cat_names is not None:
         if printouts:
             print("Filtering dataset")
         filtered_docs = [k for (k, v) in categories.items() if v in cat_names]
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     geographic_category_names = ["Frederikshavn-avis", "Morsø Debat", "Morsø-avis", "Rebild-avis", "Brønderslev-avis",
                                  "Thisted-avis", "Jammerbugt-avis", "Vesthimmerland-avis", "Hjørring-avis",
                                  "Aalborg-avis", "Morsø Sport", "Thisted sport", "Mariagerfjord-avis", "Udland-avis"]
-    info = preprocessing(json_file='full_json', printouts=True, save=True, folder_name='full_filtered', filter_categories=True, cat_names=geographic_category_names)
+    info = preprocessing(json_file='full_json', printouts=True, save=True, folder_name='full')
     print('Finished Preprocessing')
 
     # id2category = prepro_file_load('id2category', folder_name='full')
