@@ -232,10 +232,3 @@ if __name__ == '__main__':
                                  "Aalborg-avis", "Morsø Sport", "Thisted sport", "Mariagerfjord-avis", "Udland-avis"]
     info = preprocessing(json_file='full_json', printouts=True, save=True, folder_name='full')
     print('Finished Preprocessing')
-
-    # id2category = prepro_file_load('id2category', folder_name='full')
-    # geographic_category_names = ["Frederikshavn-avis", "Morsø Debat", "Morsø-avis", "Rebild-avis", "Brønderslev-avis",
-    #                              "Thisted-avis", "Jammerbugt-avis", "Vesthimmerland-avis", "Hjørring-avis",
-    #                              "Aalborg-avis", "Morsø Sport", "Thisted sport", "Mariagerfjord-avis", "Udland-avis"]
-    # geographic_category_ids = get_category_ids_from_names(id2category, geographic_category_names)
-    # filter_categories_from_dataset(geographic_category_ids, folder_name="full_filtered")
