@@ -10,13 +10,22 @@ import pickle
 from exploration.utility import get_category_ids_from_names
 
 
-def preprocessing(json_file, printouts=False, save=True, folder_name=""):
+def preprocessing(json_file, printouts=False, save=True, folder_name="", filter_categories=False, cat_names=None):
     paths = utility.load_dict_file("../paths.csv")
 
     # load data file
     if printouts:
         print("Loading dataset")
     texts, categories, authors, taxonomies = load_document_file('../' + paths[json_file])
+
+    if filter_categories:
+        if printouts:
+            print("Filtering dataset")
+        filtered_docs = [k for (k, v) in categories.items() if v in cat_names]
+        texts = {k: v for (k, v) in texts.items() if k not in filtered_docs}
+        categories = {k: v for (k, v) in categories.items() if k not in filtered_docs}
+        authors = {k: v for (k, v) in authors.items() if k not in filtered_docs}
+        taxonomies = {k: v for (k, v) in taxonomies.items() if k not in filtered_docs}
 
     # removing duplicates from dictionaries
     rev = {v: k for k, v in texts.items()}
@@ -217,70 +226,11 @@ def prepro_file_load(file_name, folder_name=None):
             return gensim.corpora.Dictionary.load(file_path)
 
 
-def filter_categories_from_dataset(category_ids, folder_name="", printouts=True):
-    paths = utility.load_dict_file("../paths.csv")
-
-    if printouts:
-        print("Loading data...")
-    doc2id = prepro_file_load('doc2word', folder_name='full')
-    documents = prepro_file_load('doc2pre_text', folder_name='full')
-    texts = prepro_file_load('doc2raw_text', folder_name='full')
-    id2doc_file = prepro_file_load('id2doc', folder_name='full')
-    authors = prepro_file_load('doc2author', folder_name='full')
-    categories = prepro_file_load('doc2category', folder_name='full')
-    taxonomies = prepro_file_load('doc2taxonomy', folder_name='full')
-    cat2id = prepro_file_load('id2category', folder_name='full')
-    auth2id = prepro_file_load('id2author', folder_name='full')
-    tax2id = prepro_file_load('id2taxonomy', folder_name='full')
-
-    if printouts:
-        print("Filtering data...")
-    filtered_docs = {k: v for (k, v) in categories.items() if v in category_ids}.keys()
-    categories = {k: v for (k, v) in categories.items() if k not in filtered_docs}
-    authors = {k: v for (k, v) in authors.items() if k not in filtered_docs}
-    taxonomies = {k: v for (k, v) in taxonomies.items() if k not in filtered_docs}
-    cat2id = {k: v for (k, v) in cat2id.items() if k not in category_ids}
-    doc2id = {k: v for (k, v) in doc2id.items() if k not in filtered_docs}
-    documents = {k: v for (k, v) in documents.items() if k not in filtered_docs}
-    texts = {k: v for (k, v) in texts.items() if k not in filtered_docs}
-    id2doc_file = {k: v for (k, v) in id2doc_file.items() if k not in filtered_docs}
-
-    if printouts:
-        print("Building Corpora")
-    corpora = gensim.corpora.Dictionary(list(documents.values()))
-
-    if printouts:
-        print("Filtering out extreme words")
-    corpora.filter_extremes(no_below=10, no_above=0.10)
-    # clean up and construct & save files
-    corpora.compactify()
-
-    doc2bow = make_doc2bow(corpora, list(documents.values()))
-    doc_word_matrix = sparse_vector_document_representations(corpora, doc2bow)
-
-    if printouts:
-        print("Saving Corpora & Preprocessed Text")
-    corpora.save('../' + update_path(paths['corpora'], folder_name))
-    with open('../' + update_path(paths['doc2bow'], folder_name), "wb") as file:
-        pickle.dump(doc2bow, file)
-    with open('../' + update_path(paths['doc_word_matrix'], folder_name), "wb") as file:
-        pickle.dump(doc_word_matrix, file)
-    utility.save_dict_file('../' + update_path(paths['id2doc'], folder_name), id2doc_file)
-    utility.save_dict_file('../' + update_path(paths['doc2raw_text'], folder_name), texts)
-    utility.save_dict_file('../' + update_path(paths['id2category'], folder_name), cat2id)
-    utility.save_dict_file('../' + update_path(paths['id2author'], folder_name), auth2id)
-    utility.save_dict_file('../' + update_path(paths['id2taxonomy'], folder_name), tax2id)
-    utility.save_dict_file('../' + update_path(paths['doc2category'], folder_name), categories)
-    utility.save_dict_file('../' + update_path(paths['doc2author'], folder_name), authors)
-    utility.save_dict_file('../' + update_path(paths['doc2taxonomy'], folder_name), taxonomies)
-    utility.save_dict_file('../' + update_path(paths['id2word'], folder_name),
-                           {v: k for k, v in corpora.token2id.items()})
-    utility.save_dict_file('../' + update_path(paths['doc2pre_text'], folder_name), documents)
-    utility.save_dict_file('../' + update_path(paths['doc2word'], folder_name), doc2id)
-
-
 if __name__ == '__main__':
-    info = preprocessing(json_file='2017_json', printouts=True, save=True, folder_name='2017')
+    geographic_category_names = ["Frederikshavn-avis", "Morsø Debat", "Morsø-avis", "Rebild-avis", "Brønderslev-avis",
+                                 "Thisted-avis", "Jammerbugt-avis", "Vesthimmerland-avis", "Hjørring-avis",
+                                 "Aalborg-avis", "Morsø Sport", "Thisted sport", "Mariagerfjord-avis", "Udland-avis"]
+    info = preprocessing(json_file='full_json', printouts=True, save=True, folder_name='full_filtered', filter_categories=True, cat_names=geographic_category_names)
     print('Finished Preprocessing')
 
     # id2category = prepro_file_load('id2category', folder_name='full')
