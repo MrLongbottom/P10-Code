@@ -1,7 +1,7 @@
 import numpy as np
 
 from model.save import load_model
-from utility import row_distribution_normalization, get_category_ids_from_names
+from exploration_utility import row_distribution_normalization, get_category_ids_from_names
 from gibbs_utility import get_topics
 import preprocess.preprocessing as pre
 

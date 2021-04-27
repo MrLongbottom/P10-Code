@@ -7,7 +7,7 @@ import itertools
 import torch.sparse
 import pickle
 
-from exploration.utility import get_category_ids_from_names
+from exploration.exploration_utility import get_category_ids_from_names
 
 
 def preprocessing(json_file, printouts=False, save=True, folder_name="", filter_categories=False, cat_names=None):

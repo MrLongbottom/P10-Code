@@ -2,7 +2,7 @@ import math
 import statistics
 
 from model.save import load_model
-from utility import row_distribution_normalization
+from exploration_utility import row_distribution_normalization
 import preprocess.preprocessing as pre
 
 
