@@ -13,10 +13,15 @@ if __name__ == '__main__':
     model_path = "../model/models/90_0.01_0.1_category"
     model = load_model(model_path)
     model_type = model_path.split("_")[-1]
+    model_type = "category" if model_type == "filtered" else model_type
     num_topics = model.num_topics
     topic_word_dist = model.topic_word
+    if model_path.split("_")[-2] == "geo":
+        id2category = pre.prepro_file_load('id2category', folder_name='full_filtered_geographic')
+    elif model_path.split("_")[-2] == "topical":
+        id2category = pre.prepro_file_load('id2category', folder_name='full_filtered_topical')
 
-    item_top_topics = sample_and_sort_items(model)
+    item_top_topics = sample_and_sort_items(model, num_items=10)
     topic_top_words = get_topics(corpora, num_topics, topic_word_dist)
 
     # printing item-topic -> topic-word connections

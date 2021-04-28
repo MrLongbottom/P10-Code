@@ -33,6 +33,10 @@ if __name__ == '__main__':
     model_path = "../model/models/90_0.01_0.1_author"
     model = load_model(model_path)
     model_type = model_path.split("_")[-1]
+    if model_path.split("_")[-2] == "geo":
+        id2category = pre.prepro_file_load('id2category', folder_name='full_filtered_geographic')
+    elif model_path.split("_")[-2] == "topical":
+        id2category = pre.prepro_file_load('id2category', folder_name='full_filtered_topical')
 
     # Get author-topic distribution and normalize
     author_topic = model.doc_topic
