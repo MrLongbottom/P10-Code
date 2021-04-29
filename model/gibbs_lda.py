@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from gibbs_utility import increase_count, decrease_count, perplexity, get_coherence, get_topics, \
-    _conditional_distribution
+    _conditional_distribution, compute_metrics_on_saved_model
 from model.save import Model
 from preprocess.preprocessing import prepro_file_load
 
@@ -81,13 +81,15 @@ if __name__ == '__main__':
 
     train_docs, test_docs = train_test_split(doc2word, test_size=0.33, random_state=1337)
 
-    word_topic_assignment, document_topic, document_topic_count, topic_word, topic_word_c = random_initialize(doc2word)
-    for i in tqdm(range(0, iterationNum)):
-        gibbs_sampling(train_docs, document_topic, document_topic_count, topic_word, topic_word_c,
-                       word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ",
-              perplexity(test_docs, document_topic, document_topic_count, topic_word, topic_word_c),
-              " Coherence: ", get_coherence(doc2bow, dictionary, texts, num_topics, topic_word))
-    model = Model(num_topics, alpha, beta, document_topic, document_topic_count, topic_word, topic_word_c, "standard")
-    model.save_model()
-    print(get_topics(dictionary, num_topics, topic_word))
+    print(compute_metrics_on_saved_model("90_0.01_0.1_standard", test_docs))
+
+    # word_topic_assignment, document_topic, document_topic_count, topic_word, topic_word_c = random_initialize(doc2word)
+    # for i in tqdm(range(0, iterationNum)):
+    #     gibbs_sampling(train_docs, document_topic, document_topic_count, topic_word, topic_word_c,
+    #                    word_topic_assignment)
+    #     print(time.strftime('%X'), "Iteration: ", i, " Completed", " Perplexity: ",
+    #           perplexity(test_docs, document_topic, document_topic_count, topic_word, topic_word_c),
+    #           " Coherence: ", get_coherence(doc2bow, dictionary, texts, num_topics, topic_word))
+    # model = Model(num_topics, alpha, beta, document_topic, document_topic_count, topic_word, topic_word_c, "standard")
+    # model.save_model()
+    # print(get_topics(dictionary, num_topics, topic_word))

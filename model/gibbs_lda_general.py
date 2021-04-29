@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from gibbs_utility import get_coherence, mean_topic_diff, get_topics, _conditional_distribution, x_perplexity, \
-    increase_count, decrease_count
+    increase_count, decrease_count, compute_metrics_on_saved_model
 from model.save import Model
 from preprocess.preprocessing import prepro_file_load
 
@@ -84,15 +84,17 @@ if __name__ == '__main__':
     D, W = (dictionary.num_docs, len(dictionary))
     train_docs, test_docs = train_test_split(doc2word, test_size=0.33, random_state=1337)
 
-    word_topic_assignment, feature_topic, feature_topic_c, topic_word, topic_word_c = random_initialize(doc2word)
+    print(compute_metrics_on_saved_model(f"90_0.01_0.1_{feature}", test_docs, doc2feature))
 
-    for i in tqdm(range(0, iterationNum)):
-        gibbs_sampling(train_docs, feature_topic, feature_topic_c, topic_word, topic_word_c, word_topic_assignment)
-        print(time.strftime('%X'), "Iteration: ", i, " Completed",
-              " Perplexity: ",
-              x_perplexity(test_docs, feature_topic, feature_topic_c, topic_word, topic_word_c, doc2feature),
-              " Coherence: ", get_coherence(doc2bow, dictionary, texts, num_topics, topic_word),
-              " Topic Diff: ", mean_topic_diff(topic_word))
-    model = Model(num_topics, alpha, beta, feature_topic, feature_topic_c, topic_word, topic_word_c, feature)
-    model.save_model()
-    print(get_topics(dictionary, num_topics, topic_word))
+    # word_topic_assignment, feature_topic, feature_topic_c, topic_word, topic_word_c = random_initialize(doc2word)
+    #
+    # for i in tqdm(range(0, iterationNum)):
+    #     gibbs_sampling(train_docs, feature_topic, feature_topic_c, topic_word, topic_word_c, word_topic_assignment)
+    #     print(time.strftime('%X'), "Iteration: ", i, " Completed",
+    #           " Perplexity: ",
+    #           x_perplexity(test_docs, feature_topic, feature_topic_c, topic_word, topic_word_c, doc2feature),
+    #           " Coherence: ", get_coherence(doc2bow, dictionary, texts, num_topics, topic_word),
+    #           " Topic Diff: ", mean_topic_diff(topic_word))
+    # model = Model(num_topics, alpha, beta, feature_topic, feature_topic_c, topic_word, topic_word_c, feature)
+    # model.save_model()
+    # print(get_topics(dictionary, num_topics, topic_word))
