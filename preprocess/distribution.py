@@ -10,8 +10,13 @@ def get_distribution(meta_data_name: str):
     doc2meta = pre.prepro_file_load(f'doc2{meta_data_name}', folder_name="full")
     id2meta = pre.prepro_file_load(f'id2{meta_data_name}', folder_name="full")
     distribution = {}
-    for k, v in doc2meta.items():
-        distribution[v] = distribution.get(v, 0) + 1
+    if meta_data == "taxonomy":
+        for k, v in doc2meta.items():
+            for v2 in v:
+                distribution[v2] = distribution.get(v2, 0) + 1
+    else:
+        for k, v in doc2meta.items():
+            distribution[v] = distribution.get(v, 0) + 1
     return {id2meta[k]: v for k, v in distribution.items()}
 
 
@@ -77,17 +82,11 @@ def print_latex_table(distribution: dict, columns: int = 4):
 
 # This file is meant to analyse and visualize various aspects of the dataset
 if __name__ == '__main__':
-    meta_data = "author"
+    meta_data = "taxonomy"
     distribution = get_distribution(meta_data)
     # distribution = {k: v for k, v in distribution.items() if v < 2000}
 
-    if meta_data == "taxonomy":
-        distribution2 = {}
-        for k, v in distribution.items():
-            taxo = k.split('/')
-            for tax in taxo:
-                distribution2[tax] = distribution2.get(tax, 0) + v
-        distribution = distribution2
+
     sizes = list(Counter(distribution.values()))
     print(f"Mean: {np.mean(sizes)}, "
           f"Median: {np.median(sizes)}, "
