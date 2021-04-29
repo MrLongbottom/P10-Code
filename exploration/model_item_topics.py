@@ -19,8 +19,6 @@ def get_sample_items(name: str):
     model_path = "../model/90_0.01_0.1_standard"
     model = load_model(model_path)
     model_type = model_path.split("_")[-1]
-    num_topics = model.num_topics
-    topic_word_dist = model.topic_word
     # specific document
     doc_id = 38668
     doc_author = 59
@@ -51,8 +49,8 @@ if __name__ == '__main__':
 
     # specific document
     doc_id = 38668
-    doc_author = 59
-    doc_category = 26
+    doc_author = pre.prepro_file_load("doc2author")[doc_id]
+    doc_category = pre.prepro_file_load("doc2category")[doc_id]
 
     models = ['standard', 'author', 'category']
     model_words = {}
@@ -86,7 +84,7 @@ if __name__ == '__main__':
         for item in sorted_item_topic.items():
             item_top_topics[item[0]] = [item[1][index] for index in range(3)]
 
-        topic_top_words = get_topics(corpora, num_topics, topic_word_dist, num_of_word_per_topic=50)
+        topic_top_words = get_topics(corpora, num_topics, topic_word_dist, num_of_word_per_topic=200)
 
         # printing item-topic -> topic-word connections
         if model_type == "standard":
