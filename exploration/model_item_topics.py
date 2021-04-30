@@ -1,7 +1,6 @@
-import random
-
 import preprocess.preprocessing as pre
 from model.save import load_model
+from exploration_utility import sample_and_sort_items
 from gibbs_utility import get_topics
 
 
@@ -16,21 +15,13 @@ if __name__ == '__main__':
     model_type = model_path.split("_")[-1]
     num_topics = model.num_topics
     topic_word_dist = model.topic_word
+    if model_type == "geographic":
+        id2category = pre.prepro_file_load('id2category', folder_name='full_geographic')
+    elif model_type == "topical":
+        id2category = pre.prepro_file_load('id2category', folder_name='full_topical')
+    model_type = "category" if model_type == "geographic" or model_type == "topical" else model_type
 
-    items = dict(enumerate(model.doc_topic))
-    items = [(k, v) for k, v in items.items()]  # convert to list of (ID, topics)
-    sample_items = random.sample(items, 5)  # sample 5 random documents
-    # convert topic probabilities to (ID, probability) pairs to know IDs after sorting
-    sample_items = [(item[0], [(index, topic) for index, topic in enumerate(item[1])]) for item in sample_items]
-
-    # sort topics in sampled docs and keep top 3 topics
-    sorted_item_topic = {}
-    for item in sample_items:
-        sorted_item_topic[item[0]] = sorted(item[1], key=lambda topic: topic[1], reverse=True)
-    item_top_topics = {}
-    for item in sorted_item_topic.items():
-        item_top_topics[item[0]] = [item[1][index] for index in range(3)]
-
+    item_top_topics = sample_and_sort_items(model, num_items=10)
     topic_top_words = get_topics(corpora, num_topics, topic_word_dist)
 
     # printing item-topic -> topic-word connections
@@ -41,8 +32,9 @@ if __name__ == '__main__':
     elif model_type == "author":
         print("Random authors with top topics:")
     else:
-        print("Model type not known!")
+        print(f"Model type '{model_type}' not known!")
         exit()
+
     for item in item_top_topics.items():
         id = item[0]
         if model_type == "standard":

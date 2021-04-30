@@ -7,14 +7,25 @@ import itertools
 import torch.sparse
 import pickle
 
+from exploration.exploration_utility import get_category_ids_from_names
 
-def preprocessing(json_file, printouts=False, save=True, folder_name=""):
+
+def preprocessing(json_file, printouts=False, save=True, folder_name="", cat_names=None):
     paths = utility.load_dict_file("../paths.csv")
 
     # load data file
     if printouts:
         print("Loading dataset")
     texts, categories, authors, taxonomies = load_document_file('../' + paths[json_file])
+
+    if cat_names is not None:
+        if printouts:
+            print("Filtering dataset")
+        filtered_docs = [k for (k, v) in categories.items() if v in cat_names]
+        texts = {k: v for (k, v) in texts.items() if k not in filtered_docs}
+        categories = {k: v for (k, v) in categories.items() if k not in filtered_docs}
+        authors = {k: v for (k, v) in authors.items() if k not in filtered_docs}
+        taxonomies = {k: v for (k, v) in taxonomies.items() if k not in filtered_docs}
 
     # removing duplicates from dictionaries
     rev = {v: k for k, v in texts.items()}
@@ -216,5 +227,8 @@ def prepro_file_load(file_name, folder_name=None):
 
 
 if __name__ == '__main__':
-    info = preprocessing(json_file='2017_json', printouts=True, save=True, folder_name='2017')
+    geographic_category_names = ["Frederikshavn-avis", "Morsø Debat", "Morsø-avis", "Rebild-avis", "Brønderslev-avis",
+                                 "Thisted-avis", "Jammerbugt-avis", "Vesthimmerland-avis", "Hjørring-avis",
+                                 "Aalborg-avis", "Morsø Sport", "Thisted sport", "Mariagerfjord-avis", "Udland-avis"]
+    info = preprocessing(json_file='full_json', printouts=True, save=True, folder_name='full')
     print('Finished Preprocessing')

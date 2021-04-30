@@ -2,6 +2,7 @@ from typing import List
 
 from gensim.models import CoherenceModel
 from scipy.spatial import distance
+from tqdm import tqdm
 
 import numpy as np
 
@@ -70,7 +71,8 @@ def get_topics(corpora, num_topics, topic_word_dist, num_of_word_per_topic: int 
     """
     topic_words = []
     id2token = {v: k for k, v in corpora.token2id.items()}
-    for z in range(0, num_topics):
+    print("Getting topics...")
+    for z in tqdm(range(0, num_topics)):
         ids = topic_word_dist[z, :].argsort()
         topic_word = []
         for j in ids:
