@@ -30,16 +30,23 @@ def calculate_author_similarities(author_topic):
 if __name__ == '__main__':
     id2author = pre.prepro_file_load('id2author', folder_name='full')
     id2category = pre.prepro_file_load('id2category', folder_name='full')
-    model_path = "../model/models/90_0.01_0.1_author"
-    model = load_model(model_path)
+    model_path = "../model/models/90_0.01_0.1_author_category_MultiModel"
+    multimodel_feature = "author"
     model_type = model_path.split("_")[-1]
+    model = load_model(model_path) if model_type != "MultiModel" else load_model(model_path, multi=True)
     if model_type == "geographic":
         id2category = pre.prepro_file_load('id2category', folder_name='full_geographic')
     elif model_type == "topical":
         id2category = pre.prepro_file_load('id2category', folder_name='full_topical')
 
     # Get author-topic distribution and normalize
-    author_topic = model.doc_topic
+    if model_type == "MultiModel":
+        if multimodel_feature == "author":  # feature_topic is authors, feature2_topic is categories
+            author_topic = model.feature_topic
+        else:
+            author_topic = model.feature2_topic
+    else:
+        author_topic = model.doc_topic
     author_topic = row_distribution_normalization(author_topic)
 
     author_similarities = calculate_author_similarities(author_topic)
@@ -53,6 +60,9 @@ if __name__ == '__main__':
     print(f"Median KL divergence: {'{:.2f}'.format(median_divergence)}\n")
     if model_type == "author":
         print("Top 10 author pairs based on symmetric KL divergence:")
+    elif model_type == "MultiModel":
+        print(f"Top 10 {'author' if multimodel_feature == 'author' else 'category'} "
+              f"pairs based on symmetric KL divergence:")
     else:
         print("Top 10 category pairs based on symmetric KL divergence:")
     for pair in top_author_pairs:
@@ -60,6 +70,13 @@ if __name__ == '__main__':
         if model_type == "author":
             print(f"KL divergence: {'{:.2f}'.format(pair[1])}, "
                   f"Authors: {id2author[authors[0]], id2author[authors[1]]}")
+        elif model_type == "MultiModel":
+            if multimodel_feature == "author":
+                print(f"KL divergence: {'{:.2f}'.format(pair[1])}, "
+                      f"Authors: {id2author[authors[0]], id2author[authors[1]]}")
+            else:
+                print(f"KL divergence: {'{:.2f}'.format(pair[1])}, "
+                      f"Categories: {id2category[authors[0]], id2category[authors[1]]}")
         else:
             print(f"KL divergence: {'{:.2f}'.format(pair[1])}, "
                   f"Categories: {id2category[authors[0]], id2category[authors[1]]}")
