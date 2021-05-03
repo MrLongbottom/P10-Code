@@ -15,8 +15,9 @@ def delete_rows_and_sort(matrix, ids):
 
 
 def print_top_topics_geographic_and_topical(num_top_topics: int = 20):
-    model_path = "../model/models/90_0.01_0.1_category"
-    model = load_model(model_path)
+    model_path = "../model/models/90_0.01_0.1_author_category_MultiModel"
+    model_type = model_path.split("_")[-1]
+    model = load_model(model_path) if model_type != "MultiModel" else load_model(model_path, multi=True)
     corpora = pre.prepro_file_load("corpora", "full")
     id2category = pre.prepro_file_load('id2category', folder_name='full')
     num_topics = model.num_topics
@@ -29,7 +30,10 @@ def print_top_topics_geographic_and_topical(num_top_topics: int = 20):
     geographic_category_ids = get_category_ids_from_names(id2category, geographic_category_names)
     # categories not based on geographic locations are closer to real topics
     topical_category_ids = [id for id in id2category.keys() if id not in geographic_category_ids]
-    category_topic = model.doc_topic
+    if model_type == "MultiModel":
+        category_topic = model.feature2_topic
+    else:
+        category_topic = model.doc_topic
     category_topic = row_distribution_normalization(category_topic)
 
     # separate the geographic and topical topic distributions and sort on the topics' summed distribution values
