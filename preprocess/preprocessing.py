@@ -1,5 +1,6 @@
 import gensim
 from tqdm import tqdm
+import Stemmer  # PyStemmer
 
 import json
 import utility
@@ -7,10 +8,8 @@ import itertools
 import torch.sparse
 import pickle
 
-from exploration.exploration_utility import get_category_ids_from_names
 
-
-def preprocessing(json_file, printouts=False, save=True, folder_name="", cat_names=None):
+def preprocessing(json_file, printouts=False, save=True, folder_name="", stem=False, cat_names=None):
     paths = utility.load_dict_file("../paths.csv")
 
     # load data file
@@ -28,6 +27,8 @@ def preprocessing(json_file, printouts=False, save=True, folder_name="", cat_nam
         taxonomies = {k: v for (k, v) in taxonomies.items() if k not in filtered_docs}
 
     # removing duplicates from dictionaries
+    if printouts:
+        print("Removing duplicates")
     rev = {v: k for k, v in texts.items()}
     new_texts = {v: k for k, v in rev.items()}
     bad_ids = [x for x in texts.keys() if x not in new_texts.keys()]
@@ -36,6 +37,16 @@ def preprocessing(json_file, printouts=False, save=True, folder_name="", cat_nam
     categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
     authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
     taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
+
+    if stem:
+        if printouts:
+            print("Stemming")
+        stemmer = Stemmer.Stemmer('danish')
+        stemmed_texts = []
+        for doc in tqdm(texts.values()):
+            stemmed_text = stemmer.stemWords(doc.split())
+            stemmed_texts.append(" ".join(stemmed_text))
+        texts = {i: v for i, v in enumerate(stemmed_texts)}
 
     # tokenize (document token generators)
     if printouts:
