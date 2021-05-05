@@ -1,43 +1,17 @@
 import itertools
-import random
 from typing import List
 
 from tqdm import tqdm
 
 import preprocess.preprocessing as pre
-from model.save import load_model
 from gibbs_utility import get_topics
+from model.save import load_model
 
 
 def color_words(words: List[str], text: str, color: str):
     for word in words:
         text = text.replace(" " + word + " ", " \\" + "colorbox" + "{" + color + "}" + "{" + word + "} ")
     return text
-
-
-def get_sample_items(name: str):
-    model_path = "../model/90_0.01_0.1_standard"
-    model = load_model(model_path)
-    model_type = model_path.split("_")[-1]
-    # specific document
-    doc_id = 38668
-    doc_author = 59
-    doc_category = 26
-
-    items = dict(enumerate(model.doc_topic))
-    items = [(k, v) for k, v in items.items()]  # convert to list of (ID, topics)
-    sample_items = []
-    if model_type == "standard":
-        sample_items = [items[doc_id]]
-    elif model_type == "category":
-        sample_items = [items[doc_category]]
-    elif model_type == "author":
-        sample_items = [items[doc_author]]
-    else:
-        print("Model type not known!")
-        exit()
-    # convert topic probabilities to (ID, probability) pairs to know IDs after sorting
-    sample_items = [(item[0], [(index, topic) for index, topic in enumerate(item[1])]) for item in sample_items]
 
 
 if __name__ == '__main__':
@@ -123,15 +97,15 @@ if __name__ == '__main__':
         itertools.chain.from_iterable([[x for x in model_words[name] if x in text] for name in models]))))
     for word in all_encountered_words:
         if word in standard_words and word in cat_words and word in author_words:
-            text = color_words([word], text, "orange")
+            text = color_words([word], text, "Peach")
         elif word in standard_words and word in cat_words:
-            text = color_words([word], text, "orange")
+            text = color_words([word], text, "Peach")
         elif word in standard_words and word in author_words:
-            text = color_words([word], text, "orange")
+            text = color_words([word], text, "Peach")
         elif word in standard_words:
-            text = color_words([word], text, "red")
+            text = color_words([word], text, "Goldenrod")
         elif word in cat_words:
-            text = color_words([word], text, "green")
+            text = color_words([word], text, "LimeGreen")
         elif word in author_words:
-            text = color_words([word], text, "blue")
+            text = color_words([word], text, "Aquamarine")
     print(text)
