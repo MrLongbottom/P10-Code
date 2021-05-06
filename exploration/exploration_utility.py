@@ -79,3 +79,15 @@ def sample_and_sort_items(model, num_items: int = 5, num_top_topics: int = 3, it
         for item in sorted_item_topic.items():
             item_top_topics[item[0]] = [item[1][index] for index in range(num_top_topics)]
     return item_top_topics
+
+
+def get_metadata_document_ids(doc2meta, meta_id):
+    document_ids = []
+    for key, val in doc2meta.items():
+        if type(val) is list:  # if it's a list, then it's a taxonomy
+            if meta_id in val:
+                document_ids.append(key)
+        else:
+            if meta_id == val:
+                document_ids.append(key)
+    return document_ids

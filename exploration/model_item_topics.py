@@ -10,7 +10,7 @@ if __name__ == '__main__':
     doc2raw = pre.prepro_file_load('doc2raw_text', folder_name='full')
     id2category = pre.prepro_file_load('id2category', folder_name='full')
     id2author = pre.prepro_file_load('id2author', folder_name='full')
-    model_path = "../model/models/90_0.01_0.1_author_category_MultiModel"
+    model_path = "../model/models/90_0.01_0.1_author"
     model_type = model_path.split("_")[-1]
     model = load_model(model_path) if model_type != "MultiModel" else load_model(model_path, multi=True)
     num_topics = model.num_topics
