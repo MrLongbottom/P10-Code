@@ -51,6 +51,30 @@ def print_latex_table(id2meta, meta_type, top_authors, max_divergence, median_di
         print(row)
 
 
+def avg_categories_for_authors():
+    doc2author = pre.prepro_file_load('doc2author', folder_name='full')
+    doc2category = pre.prepro_file_load('doc2category', folder_name='full')
+    id2author = pre.prepro_file_load('id2author', folder_name='full')
+
+    author_document_ids = []
+    for author in id2author.keys():
+        author_document_ids.append(get_metadata_document_ids(doc2author, author))
+
+    author_doc_categories = []
+    for doc_id_list in author_document_ids:
+        doc_categories = []
+        for doc_id in doc_id_list:
+            doc_categories.append(doc2category[doc_id])
+        author_doc_categories.append(doc_categories)
+
+    author_category_counts = []
+    for author_categories in author_doc_categories:
+        author_category_counts.append(len(set(author_categories)))
+    author_category_counts = sorted(author_category_counts)
+
+    return round(sum(author_category_counts) / len(author_category_counts), 2), statistics.median(author_category_counts)
+
+
 if __name__ == '__main__':
     id2author = pre.prepro_file_load('id2author', folder_name='full')
     id2category = pre.prepro_file_load('id2category', folder_name='full')
@@ -94,6 +118,8 @@ if __name__ == '__main__':
         if model_type == "author":
             print(f"KL divergence: {'{:.2f}'.format(pair[1])}, "
                   f"Authors: {id2author[authors[0]], id2author[authors[1]]}")
+            # print_metadata_documents("author", id2author[authors[0]])
+            # print_metadata_documents("author", id2author[authors[1]])
         elif model_type == "MultiModel":
             if multimodel_feature == "author":
                 print(f"KL divergence: {'{:.2f}'.format(pair[1])}, "
@@ -104,7 +130,12 @@ if __name__ == '__main__':
         else:
             print(f"KL divergence: {'{:.2f}'.format(pair[1])}, "
                   f"Categories: {id2category[authors[0]], id2category[authors[1]]}")
+            # print_metadata_documents("category", id2category[authors[0]])
+            # print_metadata_documents("category", id2category[authors[1]])
 
     print()
     id2meta = id2author if model_type == "author" else id2category
     print_latex_table(id2meta, model_type, top_author_pairs, max_divergence, median_divergence)
+
+    print()
+    print(f"Average/median number of categories for authors: {avg_categories_for_authors()}")
