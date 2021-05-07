@@ -8,7 +8,7 @@ def print_latex_table(item_top_topics, topic_top_words, id2meta):
     number_of_items = len(item_top_topics)
 
     latex_table = []
-    # generate table based on given distribution values and number of columns
+    # generate table based on item names and their topics/words
     for index, item_id in enumerate(item_top_topics.keys()):
         if index == 0:
             latex_table.append(id2meta[item_id])

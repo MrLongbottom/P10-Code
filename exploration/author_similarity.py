@@ -31,7 +31,7 @@ def calculate_author_similarities(author_topic):
 def print_latex_table(id2meta, meta_type, top_authors, max_divergence, median_divergence):
     doc2meta = pre.prepro_file_load(f'doc2{meta_type}', folder_name='full')
     latex_table = []
-    # generate table based on given distribution values and number of columns
+    # generate table based on item pair and similarity
     for pair in top_authors:
         authors = pair[0]
         author1_document_ids = get_metadata_document_ids(doc2meta, authors[0])
