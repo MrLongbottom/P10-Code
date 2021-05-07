@@ -2,7 +2,7 @@ import random
 import itertools
 from collections import Counter
 
-from exploration_utility import find_id_from_value, sample_and_sort_items
+from exploration_utility import find_id_from_value, sample_and_sort_items, get_metadata_document_ids
 from model.save import load_model
 from gibbs_utility import get_topics
 import preprocess.preprocessing as pre
@@ -51,14 +51,7 @@ def print_metadata_documents(metadata_type: str, metadata_name: str, sample_size
     metaID = find_id_from_value(id2meta, metadata_name)
 
     # get document IDs for documents with the given metadata
-    documentIDs = []
-    for key, val in doc2meta.items():
-        if type(val) is list:  # if it's a list, then it's a taxonomy
-            if metaID in val:
-                documentIDs.append(key)
-        else:
-            if metaID == val:
-                documentIDs.append(key)
+    documentIDs = get_metadata_document_ids(doc2meta, metaID)
 
     documents = {}
     documentsRaw = {}
@@ -113,6 +106,6 @@ def print_metadata_documents(metadata_type: str, metadata_name: str, sample_size
 
 
 if __name__ == '__main__':
-    print_metadata_documents("category", "Sport-avis")
-    # print_metadata_documents("author", "System Administrator")
+    # print_metadata_documents("category", "Sport-avis")
+    print_metadata_documents("author", "System Administrator")
     # print_metadata_documents("taxonomy", "EMNER", print_top_topics=True)
