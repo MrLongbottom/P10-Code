@@ -1,6 +1,6 @@
 import itertools
 from typing import List
-
+import textwrap
 from tqdm import tqdm
 
 import preprocess.preprocessing as pre
@@ -11,6 +11,11 @@ from model.save import load_model
 def color_words(words: List[str], text: str, color: str):
     for word in words:
         text = text.replace(" " + word + " ", " \\" + "colorbox" + "{" + color + "}" + "{" + word + "} ")
+    return text
+
+
+def multi_color_words(word: str, text: str, colors: List[str]):
+    text = text.replace(" " + word + " ", " \\" + "mycolor" + "{" + colors[0] + "}" + "{" + colors[1] + "}" + "{" + word + "} ")
     return text
 
 
@@ -99,9 +104,9 @@ if __name__ == '__main__':
         if word in standard_words and word in cat_words and word in author_words:
             text = color_words([word], text, "Peach")
         elif word in standard_words and word in cat_words:
-            text = color_words([word], text, "Peach")
+            text = multi_color_words(word, text, ["Goldenrod", "LimeGreen"])
         elif word in standard_words and word in author_words:
-            text = color_words([word], text, "Peach")
+            text = multi_color_words(word, text, ["Goldenrod", "Aquamarine"])
         elif word in standard_words:
             text = color_words([word], text, "Goldenrod")
         elif word in cat_words:
