@@ -7,8 +7,8 @@ from collections import Counter
 
 
 def get_distribution(meta_data_name: str):
-    doc2meta = pre.prepro_file_load(f'doc2{meta_data_name}', folder_name="full")
-    id2meta = pre.prepro_file_load(f'id2{meta_data_name}', folder_name="full")
+    doc2meta = pre.prepro_file_load(f'doc2{meta_data_name}', folder_name="full_no_meta_preprocessing")
+    id2meta = pre.prepro_file_load(f'id2{meta_data_name}', folder_name="full_no_meta_preprocessing")
     distribution = {}
     if meta_data == "taxonomy":
         for k, v in doc2meta.items():
@@ -57,15 +57,17 @@ def print_pie_chart(meta_data):
     plt.show()
 
 
-def print_latex_table(distribution: dict, columns: int = 4):
+def print_latex_table(distribution: dict, columns: int = 4, skip: int = 0, highlight_limit: int = 0):
     sorted_dict = {k: v for k, v in sorted(distribution.items(), key=lambda item: item[1], reverse=True)}
+    if skip != 0:
+        sorted_dict = remove_elements_from_indices(sorted_dict, skip, skip)
     number_of_items = len(sorted_dict)
     items_per_column = math.ceil(number_of_items / columns)
 
     latex_table = []
     # generate table based on given distribution values and number of columns
     for index, item in enumerate(sorted_dict.items()):
-        latexItem = f"{item[0]} & {item[1]}"
+        latexItem = f"{item[0]} & {item[1]}" if item[1] >= highlight_limit else f"\\textbf{{{item[0]}}} & {item[1]}"
         if index < items_per_column:
             latex_table.append(latexItem)
         else:
@@ -80,12 +82,19 @@ def print_latex_table(distribution: dict, columns: int = 4):
         print(latex_table[index])
 
 
+def remove_elements_from_indices(dictionary: dict, start_index, end_index):
+    element_list = list(dictionary.items())
+    filtered_list = element_list[:start_index] + element_list[-end_index:]
+    filtered_list = [(k.replace("&", "\\&"), v) for (k, v) in filtered_list]
+    filtered_dict = {k: v for (k, v) in filtered_list}
+    return filtered_dict
+
+
 # This file is meant to analyse and visualize various aspects of the dataset
 if __name__ == '__main__':
     meta_data = "taxonomy"
     distribution = get_distribution(meta_data)
     # distribution = {k: v for k, v in distribution.items() if v < 2000}
-
 
     sizes = list(Counter(distribution.values()))
     print(f"Mean: {np.mean(sizes)}, "
@@ -96,4 +105,4 @@ if __name__ == '__main__':
     fig1, ax1 = plt.subplots()
     print_histogram(meta_data)
 
-    print_latex_table(distribution, columns=4)
+    print_latex_table(distribution, columns=4, skip=100, highlight_limit=14)
