@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
 from gibbs_utility import increase_count, decrease_count, perplexity, get_coherence, get_topics, \
-    _conditional_distribution
+    _conditional_distribution, compute_metrics_on_saved_model
 from model.save import Model
 from preprocess.preprocessing import prepro_file_load
 
@@ -91,3 +91,7 @@ if __name__ == '__main__':
     model = Model(num_topics, alpha, beta, document_topic, document_topic_count, topic_word, topic_word_c, "standard")
     model.save_model()
     print(get_topics(dictionary, num_topics, topic_word))
+
+    # doc2word = list(prepro_file_load("doc2word").items())
+    # train_docs, test_docs = train_test_split(doc2word, test_size=0.33, random_state=1337)
+    # print(compute_metrics_on_saved_model("90_0.01_0.1_author_category_MultiModel", test_docs, True))
