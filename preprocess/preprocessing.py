@@ -29,11 +29,12 @@ def preprocessing(json_file, printouts=False, save=True, folder_name="", stem=Fa
     # removing duplicates from dictionaries
     if printouts:
         print("Removing duplicates")
-    rev = {v: k for k, v in texts.items()}
-    new_texts = {v: k for k, v in rev.items()}
-    bad_ids = [x for x in texts.keys() if x not in new_texts.keys()]
-    id2doc_file = {num_id: name_id for num_id, name_id in enumerate(new_texts.keys())}
-    texts = {e: v.replace('\n', '') for e, (k, v) in enumerate(new_texts.items()) if k not in bad_ids}
+    rev = {v: k for k, v in tqdm(texts.items())}
+    new_texts = {v: k for k, v in tqdm(rev.items())}
+    bad_ids = [x for x in tqdm(texts.keys()) if x not in new_texts.keys()]
+    id2doc_file = {num_id: name_id for num_id, name_id in tqdm(enumerate(new_texts.keys()))}
+    texts = {e: v.replace('\n', '') for e, (k, v) in tqdm(enumerate(new_texts.items())) if k not in bad_ids}
+    # TODO speedup these 3 lines
     categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
     authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
     taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
