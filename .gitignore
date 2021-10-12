@@ -1,5 +1,6 @@
 data/*
 preprocess/generated_files/*
+model/generated_files/*
 
 !empty
 

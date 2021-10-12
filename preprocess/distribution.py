@@ -100,7 +100,8 @@ if __name__ == '__main__':
     print(f"Mean: {np.mean(sizes)}, "
           f"Median: {np.median(sizes)}, "
           f"Min: {np.min(sizes)}, "
-          f"Max: {np.max(sizes)}")
+          f"Max: {np.max(sizes)}, "
+          f"Std: {np.std(sizes)}")
     names = [str(x) for x in sizes]
     fig1, ax1 = plt.subplots()
     print_histogram(meta_data)

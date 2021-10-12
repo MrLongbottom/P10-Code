@@ -34,10 +34,10 @@ def preprocessing(json_file, printouts=False, save=True, folder_name="", stem=Fa
     bad_ids = [x for x in tqdm(texts.keys()) if x not in new_texts.keys()]
     id2doc_file = {num_id: name_id for num_id, name_id in tqdm(enumerate(new_texts.keys()))}
     texts = {e: v.replace('\n', '') for e, (k, v) in tqdm(enumerate(new_texts.items())) if k not in bad_ids}
-    # TODO speedup these 3 lines
-    categories = {e: v for e, (k, v) in enumerate(categories.items()) if k not in bad_ids}
-    authors = {e: v for e, (k, v) in enumerate(authors.items()) if k not in bad_ids}
-    taxonomies = {e: v for e, (k, v) in enumerate(taxonomies.items()) if k not in bad_ids}
+    # TODO speedup the following 3 lines
+    categories = {e: v for e, (k, v) in tqdm(enumerate(categories.items())) if k not in bad_ids}
+    authors = {e: v for e, (k, v) in tqdm(enumerate(authors.items())) if k not in bad_ids}
+    taxonomies = {e: v for e, (k, v) in tqdm(enumerate(taxonomies.items())) if k not in bad_ids}
 
     if stem:
         if printouts:
