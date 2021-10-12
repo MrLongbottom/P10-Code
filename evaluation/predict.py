@@ -1,9 +1,12 @@
 import math
 import pickle
+
+import scipy.stats
 from tqdm import tqdm
 import numpy as np
 from scipy.linalg import norm
 from scipy.spatial.distance import euclidean
+from scipy.stats import dirichlet
 
 from preprocess.preprocessing import prepro_file_load
 from statistics import mean
@@ -63,14 +66,28 @@ if __name__ == '__main__':
     with open(path+"document_topic_dists.pickle", "rb") as file:
         doc_top_dists = pickle.load(file)
 
+    """
+    # Test case
     doc_top = np.array([0.4, 0.3, 0.10, 0.20])
     top_word = {0: np.array([0.65, 0.0, 0.0, 0.35]),
                 1: np.array([0.05, 0.35, 0.15, 0.45]),
                 2: np.array([0.55, 0.0, 0.15, 0.3]),
                 3: np.array([0, 0.45, 0.35, 0.2])}
-
-    #decorate(doc_top_dists[2][0], top_word_dists[2])
+    
     decorate(doc_top, top_word)
+    """
+    """
+    # Dirichlet test case
+    topic_num = 90
+    word_num = 69192
+    top_dir = dirichlet(np.full(topic_num, 0.1))
+    word_dir = dirichlet(np.full(word_num, 0.01))
+    top_sample = top_dir.rvs(size=1)[0]
+    word_samples = word_dir.rvs(size=topic_num)
+    decorate(top_sample, word_samples)
+    """
+
+    decorate(doc_top_dists[2][0], top_word_dists[2])
 
     # For others Measure distance between topic-distributions for the test document and other documents written by
     # the same author. NOTE even if two topics are using the same words, documents using these two topics separately
