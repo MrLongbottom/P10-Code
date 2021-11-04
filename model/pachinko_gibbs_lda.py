@@ -1,16 +1,15 @@
+import sys
 import pickle
-from sklearn.model_selection import train_test_split
 import time
 from typing import List
-from scipy import sparse
 import numpy as np
 from tqdm import tqdm
 import random
 
-import utility
+sys.path.append('../')
+
 from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics
 from preprocess.preprocessing import prepro_file_load
-import math
 
 
 def random_initialize(documents):

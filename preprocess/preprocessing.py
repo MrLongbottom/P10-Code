@@ -1,6 +1,6 @@
 import gensim
 from tqdm import tqdm
-import Stemmer  # PyStemmer
+#import Stemmer  # PyStemmer
 
 import json
 import utility
@@ -39,6 +39,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name="", stem=Fa
     authors = {e: v for e, (k, v) in tqdm(enumerate(authors.items())) if k not in bad_ids}
     taxonomies = {e: v for e, (k, v) in tqdm(enumerate(taxonomies.items())) if k not in bad_ids}
 
+    """
     if stem:
         if printouts:
             print("Stemming")
@@ -48,6 +49,7 @@ def preprocessing(json_file, printouts=False, save=True, folder_name="", stem=Fa
             stemmed_text = stemmer.stemWords(doc.split())
             stemmed_texts.append(" ".join(stemmed_text))
         texts = {i: v for i, v in enumerate(stemmed_texts)}
+    """
 
     # tokenize (document token generators)
     if printouts:
