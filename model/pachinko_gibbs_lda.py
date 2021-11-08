@@ -1,12 +1,9 @@
-import sys
 import pickle
 import time
 from typing import List
 import numpy as np
 from tqdm import tqdm
 import random
-
-sys.path.append('../')
 
 from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics
 from preprocess.preprocessing import prepro_file_load

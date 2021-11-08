@@ -4,4 +4,5 @@ WORKDIR .
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 COPY . .
+ENV PYTHONPATH "${PYTHONPATH}:."
 CMD ["python", "./model/pachinko_gibbs_lda.py"]
