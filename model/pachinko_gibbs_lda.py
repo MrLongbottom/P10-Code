@@ -211,7 +211,7 @@ def taxonomy_structure(layers):
 
 if __name__ == '__main__':
     random.seed()
-    np.random.seed(time.time())
+    np.random.seed()
     in_folder = 'full'
     out_folder = 'test'
     alpha = 0.01
