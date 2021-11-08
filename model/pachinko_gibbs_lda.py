@@ -211,12 +211,12 @@ def taxonomy_structure(layers):
 
 if __name__ == '__main__':
     random.seed()
-    np.random.seed()
+    np.random.seed(time.time())
     in_folder = 'full'
     out_folder = 'test'
     alpha = 0.01
     beta = 0.1
-    iterationNum = 100
+    iterationNum = 2
     # number of "empty" topics in bottom layer
     # if 'None' no bottom layer of empty topic will be added
     K = 90
@@ -279,17 +279,17 @@ if __name__ == '__main__':
 
     path = f"generated_files/{out_folder}/"
 
-    with open(path+"wta.pickle", "wb") as file:
+    with open(path+"wta.pickle", "wb+") as file:
         pickle.dump(word_topic_assignment, file)
-    with open(path+"middle.pickle", "wb") as file:
+    with open(path+"middle.pickle", "wb+") as file:
         pickle.dump(middle_layers, file)
-    with open(path+"topic_word.pickle", "wb") as file:
+    with open(path+"topic_word.pickle", "wb+") as file:
         pickle.dump(topic_words, file)
-    with open(path+"topic_to_word.pickle", "wb") as file:
+    with open(path+"topic_to_word.pickle", "wb+") as file:
         pickle.dump(topic_to_word, file)
-    with open(path+"topic_word_dists.pickle", "wb") as file:
+    with open(path+"topic_word_dists.pickle", "wb+") as file:
         pickle.dump(top_word_dists, file)
-    with open(path+"document_topic_dists.pickle", "wb") as file:
+    with open(path+"document_topic_dists.pickle", "wb+") as file:
         pickle.dump(doc_top_dists, file)
 
 
