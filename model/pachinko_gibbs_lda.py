@@ -1,3 +1,4 @@
+import os
 import pickle
 import time
 from typing import List
@@ -237,6 +238,9 @@ if __name__ == '__main__':
     if K is not None:
         layer_lengths.append(K)
 
+    print(os.getcwd())
+    print(os.listdir(os.getcwd()))
+
     word_topic_assignment, middle_layers, topic_to_word = random_initialize(doc2word)
 
     # things needed to calculate coherence
@@ -277,7 +281,7 @@ if __name__ == '__main__':
         for t in range(layer_lengths[l]):
             top_word_dists[l][t] = top_word_dists[l][t] / top_word_dists[l][t].sum()
 
-    path = f"generated_files/{out_folder}/"
+    path = f"model/generated_files/{out_folder}/"
 
     with open(path+"wta.pickle", "wb+") as file:
         pickle.dump(word_topic_assignment, file)
