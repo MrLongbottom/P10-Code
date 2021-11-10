@@ -217,7 +217,7 @@ if __name__ == '__main__':
     out_folder = 'test'
     alpha = 0.01
     beta = 0.1
-    iterationNum = 0
+    iterationNum = 100
     # number of "empty" topics in bottom layer
     # if 'None' no bottom layer of empty topic will be added
     K = 90
