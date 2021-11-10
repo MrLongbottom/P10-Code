@@ -4,3 +4,4 @@
 /venv/*
 /exploration/*
 /exploration
+/model/generated_files/test/*
