@@ -217,7 +217,7 @@ if __name__ == '__main__':
     out_folder = 'test'
     alpha = 0.01
     beta = 0.1
-    iterationNum = 2
+    iterationNum = 0
     # number of "empty" topics in bottom layer
     # if 'None' no bottom layer of empty topic will be added
     K = 90
@@ -238,8 +238,20 @@ if __name__ == '__main__':
     if K is not None:
         layer_lengths.append(K)
 
+    path = f"model/generated_files/{out_folder}/"
+
     print(os.getcwd())
     print(os.listdir(os.getcwd()))
+    print(os.listdir('/model/'))
+    print(os.listdir('/model/generated_files'))
+    print(os.listdir('/model/generated_files/test'))
+
+    open(path+"wta.pickle", "x")
+    open(path+"middle.pickle", "x")
+    open(path+"topic_word.pickle", "x")
+    open(path+"topic_to_word.pickle", "x")
+    open(path+"topic_word_dists.pickle", "x")
+    open(path+"document_topic_dists.pickle", "x")
 
     word_topic_assignment, middle_layers, topic_to_word = random_initialize(doc2word)
 
@@ -281,7 +293,7 @@ if __name__ == '__main__':
         for t in range(layer_lengths[l]):
             top_word_dists[l][t] = top_word_dists[l][t] / top_word_dists[l][t].sum()
 
-    path = f"model/generated_files/{out_folder}/"
+
 
     with open(path+"wta.pickle", "wb+") as file:
         pickle.dump(word_topic_assignment, file)
@@ -296,6 +308,7 @@ if __name__ == '__main__':
     with open(path+"document_topic_dists.pickle", "wb+") as file:
         pickle.dump(doc_top_dists, file)
 
+    print('done.')
 
 
 
