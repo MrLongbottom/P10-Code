@@ -229,7 +229,7 @@ if __name__ == '__main__':
     corpora = prepro_file_load("corpora", folder_name=in_folder)
     doc2word = list(prepro_file_load("doc2word", folder_name=in_folder).items())
     # number of docs and words
-    N, M = (corpora.num_docs, len(corpora))
+    N, M = (len(doc2word), len(corpora))
 
     # taxonomy tree structure
     root, struct_root = taxonomy_structure(mid_layers_num)
