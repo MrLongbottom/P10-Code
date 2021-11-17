@@ -178,8 +178,8 @@ def tax2topic_id(tax_id_list):
         elif tax_name in struct_root[0]:
             topic_ids.append([struct_root[0].index(tax_name)])
             curr_list += 1
-        elif tax_name in struct_root[len(topic_ids)] and curr_list != -1 and len(topic_ids[curr_list]) < mid_layers_num:
-            topic_ids[curr_list].append(struct_root[len(topic_ids)].index(tax_name))
+        elif curr_list != -1 and len(topic_ids[curr_list]) < mid_layers_num and tax_name in struct_root[len(topic_ids[curr_list])]:
+            topic_ids[curr_list].append(struct_root[len(topic_ids[curr_list])].index(tax_name))
     topic_ids = [x[:mid_layers_num] for x in topic_ids]
     return topic_ids
 
