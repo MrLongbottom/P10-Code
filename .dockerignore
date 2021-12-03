@@ -1,0 +1,7 @@
+/data/*
+/data
+/venv
+/venv/*
+/exploration/*
+/exploration
+/model/generated_files/test/*

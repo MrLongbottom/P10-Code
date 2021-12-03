@@ -1,16 +1,13 @@
+import os
 import pickle
-from sklearn.model_selection import train_test_split
 import time
 from typing import List
-from scipy import sparse
 import numpy as np
 from tqdm import tqdm
 import random
 
-import utility
 from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics
 from preprocess.preprocessing import prepro_file_load
-import math
 
 
 def random_initialize(documents):
@@ -220,7 +217,7 @@ if __name__ == '__main__':
     out_folder = 'test'
     alpha = 0.01
     beta = 0.1
-    iterationNum = 2
+    iterationNum = 50
     # number of "empty" topics in bottom layer
     # if 'None' no bottom layer of empty topic will be added
     K = 90
@@ -232,7 +229,7 @@ if __name__ == '__main__':
     corpora = prepro_file_load("corpora", folder_name=in_folder)
     doc2word = list(prepro_file_load("doc2word", folder_name=in_folder).items())
     # number of docs and words
-    N, M = (corpora.num_docs, len(corpora))
+    N, M = (len(doc2word), len(corpora))
 
     # taxonomy tree structure
     root, struct_root = taxonomy_structure(mid_layers_num)
@@ -240,6 +237,21 @@ if __name__ == '__main__':
     layer_lengths = [len(x) for x in struct_root]
     if K is not None:
         layer_lengths.append(K)
+
+    path = f"model/generated_files/{out_folder}/"
+
+    print(os.getcwd())
+    print(os.listdir(os.getcwd()))
+    print(os.listdir('/model/'))
+    print(os.listdir('/model/generated_files'))
+    print(os.listdir('/model/generated_files/test'))
+
+    open(path+"wta.pickle", "x")
+    open(path+"middle.pickle", "x")
+    open(path+"topic_word.pickle", "x")
+    open(path+"topic_to_word.pickle", "x")
+    open(path+"topic_word_dists.pickle", "x")
+    open(path+"document_topic_dists.pickle", "x")
 
     word_topic_assignment, middle_layers, topic_to_word = random_initialize(doc2word)
 
@@ -281,21 +293,22 @@ if __name__ == '__main__':
         for t in range(layer_lengths[l]):
             top_word_dists[l][t] = top_word_dists[l][t] / top_word_dists[l][t].sum()
 
-    path = f"generated_files/{out_folder}/"
 
-    with open(path+"wta.pickle", "wb") as file:
+
+    with open(path+"wta.pickle", "wb+") as file:
         pickle.dump(word_topic_assignment, file)
-    with open(path+"middle.pickle", "wb") as file:
+    with open(path+"middle.pickle", "wb+") as file:
         pickle.dump(middle_layers, file)
-    with open(path+"topic_word.pickle", "wb") as file:
+    with open(path+"topic_word.pickle", "wb+") as file:
         pickle.dump(topic_words, file)
-    with open(path+"topic_to_word.pickle", "wb") as file:
+    with open(path+"topic_to_word.pickle", "wb+") as file:
         pickle.dump(topic_to_word, file)
-    with open(path+"topic_word_dists.pickle", "wb") as file:
+    with open(path+"topic_word_dists.pickle", "wb+") as file:
         pickle.dump(top_word_dists, file)
-    with open(path+"document_topic_dists.pickle", "wb") as file:
+    with open(path+"document_topic_dists.pickle", "wb+") as file:
         pickle.dump(doc_top_dists, file)
 
+    print('done.')
 
 
 
