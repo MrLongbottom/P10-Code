@@ -1,3 +1,4 @@
+import pickle
 import time
 from typing import List
 
@@ -119,9 +120,11 @@ def triple_perplexity(documents: List[np.ndarray],
 
 
 if __name__ == '__main__':
+    out_folder = 'doc_auth'
+    path = f"generated_files/{out_folder}/"
     alpha = 0.01
     beta = 0.1
-    iterationNum = 50
+    iterationNum = 100
     num_topics = 90
     doc2author = prepro_file_load("doc2author")
     num_authors = len(set(list(doc2author.values())))
@@ -129,7 +132,7 @@ if __name__ == '__main__':
     doc2bow, dictionary, texts = prepro_file_load('doc2bow'), prepro_file_load('corpora'), list(
         prepro_file_load('doc2pre_text').values())
     D, W = (dictionary.num_docs, len(dictionary))
-    train_docs, test_docs = train_test_split(doc2word, test_size=0.33, random_state=1337)
+    train_docs, test_docs = train_test_split(doc2word, test_size=0.1, random_state=1337)
 
     word_topic_assignment, author_topic, author_topic_c, doc_topic, doc_topic_c, topic_word, topic_word_c = \
         random_initialize(doc2word)
@@ -159,4 +162,34 @@ if __name__ == '__main__':
                            topic_word, topic_word_c,
                            "author_doc")
         model.save_model()
-    print(get_topics(dictionary, num_topics, topic_word))
+    topic_words = get_topics(dictionary, num_topics, topic_word)
+
+    print(topic_words)
+
+    print('generating distributions')
+
+    # calculate document-topic distribution
+    doc_top_dists = {}
+    for id, doc_info in tqdm(enumerate(word_topic_assignment)):
+            doc_dist = np.zeros(shape=num_topics)
+            for word in doc_info:
+                doc_dist[word] += 1
+            doc_top_dists[id] = doc_dist / doc_dist.sum()
+
+    # calculate topic-word distribution
+    top_word_dists = {i: np.zeros(D) for i in range(num_topics)}
+    for id, doc_info in tqdm(enumerate(word_topic_assignment)):
+        for word_pos, word_topic in enumerate(doc_info):
+            word_id = doc2word[id][1][word_pos]
+            top_word_dists[word_topic][word_id] += 1
+    for t in range(len(top_word_dists)):
+        top_word_dists[t] = top_word_dists[t] / top_word_dists[t].sum()
+
+    with open(path + "wta.pickle", "wb+") as file:
+        pickle.dump(word_topic_assignment, file)
+    with open(path + "topic_word.pickle", "wb+") as file:
+        pickle.dump(topic_words, file)
+    with open(path + "topic_word_dists.pickle", "wb+") as file:
+        pickle.dump(top_word_dists, file)
+    with open(path + "document_topic_dists.pickle", "wb+") as file:
+        pickle.dump(doc_top_dists, file)
