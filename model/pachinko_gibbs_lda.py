@@ -70,7 +70,6 @@ def gibbs_sampling(documents: List[np.ndarray],):
     Takes a set of documents and samples a new topic for each word within each document.
     :param documents: a list of documents with their word ids
     """
-    # TODO alpha estimations (might not be needed?)
     # sum calculated to be used later
     topic_to_word_sums = topic_to_word.sum(axis=1)
     letters = ['a', 'b', 'c', 'd']
@@ -101,13 +100,16 @@ def gibbs_sampling(documents: List[np.ndarray],):
             topic = word_topic_assignment[d_index][w_index]
             decrease_counts(topic, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d_index)
 
-            # Pachinko Equation (pachinko paper, bottom of page four, extended to three layers)
+            # Pachinko Equation (pachinko paper, bottom of page four, extended to any number of layers)
             divs = []
+            # First layer
             if len(word_tax) == 0:
                 divs.append(np.divide((middle_sums[0] + alpha), len(doc) + (layer_lengths[0] * alpha)))
+            # Middle layers
             for i in range(len(middle_sums)):
                 if len(word_tax) < i+2:
                     divs.append(np.divide((middle_layers[d_index][i] + alpha).T, (middle_sums[i] + (layer_lengths[i+1] * alpha))).T)
+            # Last layer
             if len(word_tax) < len(layer_lengths):
                 divs.append(np.divide((topic_to_word[:, word] + beta), topic_to_word_sums + (M * beta)))
 
@@ -122,17 +124,22 @@ def gibbs_sampling(documents: List[np.ndarray],):
                         elif len(divs[len(word_tax)-1].shape) == 1:
                             steps.append(divs[len(word_tax)-1][word_tax[len(word_tax)-1]])
                         else:
-                            print("fuck")
+                            print("should never happen")
                         continue
                     else:
                         start = steps[step-1]
                     end = divs[step]
+                    # construct a string of dimensions as input for np.einsum()
+                    # should have the following format 'ab, bc -> abc'
+                    # with the last part of the string being the union of the first two parts.
+                    # https://numpy.org/doc/stable/reference/generated/numpy.einsum.html
                     letters1 = [letters[x] for x in start.shape]
                     letters2 = [letters[x] for x in end.shape]
                     letters3 = [x for x in letters1]
                     letters3.extend(letters2)
                     letters3 = list(set(letters3))
-                    steps.append(np.einsum(''.join(letters1) + ',' + ''.join(letters2) + '->' + ''.join(letters3), start, end))
+                    join_string = ''.join(letters1) + ',' + ''.join(letters2) + '->' + ''.join(letters3)
+                    steps.append(np.einsum(join_string, start, end))
             # if taxonomy is not known
             else:
                 for step in range(len(layer_lengths)):
@@ -146,7 +153,9 @@ def gibbs_sampling(documents: List[np.ndarray],):
                     letters3 = [x for x in letters1]
                     letters3.extend(letters2)
                     letters3 = list(set(letters3))
-                    steps.append(np.einsum(''.join(letters1) + ',' + ''.join(letters2) + '->' + ''.join(letters3), start, end))
+                    letters3.sort()
+                    join_string = ''.join(letters1) + ',' + ''.join(letters2) + '->' + ''.join(letters3)
+                    steps.append(np.einsum(join_string, start, end))
 
             # convert matrix into flat array to sample a word_taxonomy combination
             flat = np.asarray(steps[len(steps)-1].flatten() / steps[len(steps)-1].sum())
