@@ -48,6 +48,7 @@ def random_initialize(documents):
 
 
 def decrease_counts(topics, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d):
+    """Removes the current word from variables keeping track of different word/topic counts"""
     for i, x in enumerate(middle_layers[d]):
         x[topics[i], topics[i+1]] -= 1
     for i, x in enumerate(middle_sums):
@@ -57,6 +58,7 @@ def decrease_counts(topics, middle_layers, middle_sums, topic_to_word, topic_to_
 
 
 def increase_counts(topics, middle_layers, middle_sums, topic_to_word, topic_to_word_sums, word, d):
+    """Adds the current word from variables keeping track of different word/topic counts"""
     for i, x in enumerate(middle_layers[d]):
         x[topics[i], topics[i + 1]] += 1
     for i, x in enumerate(middle_sums):
@@ -72,6 +74,7 @@ def gibbs_sampling(documents: List[np.ndarray],):
     """
     # sum calculated to be used later
     topic_to_word_sums = topic_to_word.sum(axis=1)
+    # letters are used for the np.einsum function
     letters = ['a', 'b', 'c', 'd']
     letters = {layer_lengths[i]: letters[i] for i in range(len(layer_lengths))}
 
@@ -138,6 +141,7 @@ def gibbs_sampling(documents: List[np.ndarray],):
                     letters3 = [x for x in letters1]
                     letters3.extend(letters2)
                     letters3 = list(set(letters3))
+                    letters3.sort()  # untested, but should be more correct.
                     join_string = ''.join(letters1) + ',' + ''.join(letters2) + '->' + ''.join(letters3)
                     steps.append(np.einsum(join_string, start, end))
             # if taxonomy is not known
@@ -153,7 +157,7 @@ def gibbs_sampling(documents: List[np.ndarray],):
                     letters3 = [x for x in letters1]
                     letters3.extend(letters2)
                     letters3 = list(set(letters3))
-                    letters3.sort()
+                    letters3.sort()  # untested, but should be more correct.
                     join_string = ''.join(letters1) + ',' + ''.join(letters2) + '->' + ''.join(letters3)
                     steps.append(np.einsum(join_string, start, end))
 
@@ -174,7 +178,8 @@ def gibbs_sampling(documents: List[np.ndarray],):
 
 def tax2topic_id(tax_id_list):
     """
-    Convert taxonomy id list into id's in taxonomy tree structure
+    Convert taxonomy id list into id's in taxonomy tree structure.
+    Such that each taxonomy sequence is represented within the tree
     :param tax_id_list: list of taxonomy id's
     :return: list of taxonomy id's in the taxonomy tree structure (aka. topic id's)
     """
@@ -249,11 +254,14 @@ if __name__ == '__main__':
 
     path = f"model/generated_files/{out_folder}/"
 
+    '''
+    # check that files and folders exist
     print(os.getcwd())
     print(os.listdir(os.getcwd()))
     print(os.listdir('/model/'))
     print(os.listdir('/model/generated_files'))
     print(os.listdir('/model/generated_files/test'))
+
 
     open(path+"wta.pickle", "x")
     open(path+"middle.pickle", "x")
@@ -261,7 +269,9 @@ if __name__ == '__main__':
     open(path+"topic_to_word.pickle", "x")
     open(path+"topic_word_dists.pickle", "x")
     open(path+"document_topic_dists.pickle", "x")
+    '''
 
+    # randomly assign topics to words, and calculate topic-word distribution and middle layers distributions
     word_topic_assignment, middle_layers, topic_to_word = random_initialize(doc2word)
 
     # things needed to calculate coherence
@@ -302,8 +312,7 @@ if __name__ == '__main__':
         for t in range(layer_lengths[l]):
             top_word_dists[l][t] = top_word_dists[l][t] / top_word_dists[l][t].sum()
 
-
-
+    # Save results
     with open(path+"wta.pickle", "wb+") as file:
         pickle.dump(word_topic_assignment, file)
     with open(path+"middle.pickle", "wb+") as file:
