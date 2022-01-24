@@ -10,6 +10,12 @@ from gibbs_utility import get_coherence, mean_topic_diff, get_topics, _condition
 from model.save import MultiModel
 from preprocess.preprocessing import prepro_file_load
 
+# Topic model using gibbs sampling with integrated author data
+# Each author have their own topic distribution
+# Works better if each document ALSO has their own topic distribution
+# All topic distributions are combined to form a single topic distribution
+# or various other integrations that include more speciality for each document while still integrating metadata
+# THIS MODEL IS NOT VERY USEFUL!
 
 def random_initialize(documents):
     """

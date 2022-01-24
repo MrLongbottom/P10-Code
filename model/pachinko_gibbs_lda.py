@@ -9,6 +9,18 @@ import random
 from gibbs_utility import perplexity, get_coherence, mean_topic_diff, get_topics
 from preprocess.preprocessing import prepro_file_load
 
+# THIS IS THE PRIMARY MODEL FOR THIS PROJECT
+# all other models have performed worse, or a simplified version of this model
+
+# Pachinko Allocation Model using Gibbs Sampling
+# With integrated taxonomy metadata
+# Generalized to work with any number of layers
+# (though it slows the algorithm significantly to go beyond 3 layers (2 taxonomy, one K layer)
+
+# One topic is created for each taxonomy for a chosen number of layers of the taxonomy tree
+# Documents with a taxonomy are locked to only sample from topics that include their taxonomy
+# (if there are any on the current layer)
+
 
 def random_initialize(documents):
     """
@@ -227,7 +239,7 @@ def taxonomy_structure(layers):
 if __name__ == '__main__':
     random.seed()
     np.random.seed()
-    in_folder = 'full'
+    in_folder = 'nice'
     out_folder = 'test'
     alpha = 0.01
     beta = 0.1

@@ -11,6 +11,9 @@ from model.save import Model
 from preprocess.preprocessing import prepro_file_load
 import pickle
 
+# Topic model using gibbs sampling
+
+
 def random_initialize(documents: List[np.ndarray]):
     """
     Randomly initialisation of the word topics

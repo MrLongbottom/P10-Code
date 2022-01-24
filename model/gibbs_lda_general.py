@@ -13,6 +13,11 @@ from gibbs_utility import get_coherence, mean_topic_diff, get_topics, _condition
 from model.save import Model
 from preprocess.preprocessing import prepro_file_load
 
+# Topic model using gibbs sampling
+# This is almost the same as the 'gibbs_lda.py' model
+# it was meant to be generalized to work with any number of layers,
+# however this was only done for 'pachinko_gibbs_lda.py'
+# I'm leaving this model be as it has slightly different code (though 'gibbs_lda.py' is more updated)
 
 def random_initialize(documents):
     """
