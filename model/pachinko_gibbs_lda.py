@@ -13,6 +13,7 @@ from preprocess.preprocessing import prepro_file_load
 # all other models have performed worse, or a simplified version of this model
 
 # Pachinko Allocation Model using Gibbs Sampling
+# Based on the following paper: https://dl.acm.org/doi/10.1145/1143844.1143917
 # With integrated taxonomy metadata
 # Generalized to work with any number of layers
 # (though it slows the algorithm significantly to go beyond 3 layers (2 taxonomy, one K layer)
@@ -339,6 +340,3 @@ if __name__ == '__main__':
         pickle.dump(doc_top_dists, file)
 
     print('done.')
-
-
-
